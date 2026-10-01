@@ -123,4 +123,13 @@
     <string name="floating_mic_a11y">Enable text insertion</string>
     <string name="floating_mic_a11y_hint">Optional but recommended: enable “Offline Voice Input” under Accessibility so the text is typed directly into the field. Without it, the text is only copied to the clipboard.</string>
     <string name="a11y_dictation_description">Types the text you dictate with the floating mic button into the focused field. It does not read or store anything on screen.</string>
+    <string name="floating_mic_size">Button size</string>
+    <string name="floating_mic_opacity">Opacity</string>
+    <string name="floating_mic_side">Position</string>
+    <string name="floating_mic_side_free">Free (drag it anywhere)</string>
+    <string name="floating_mic_side_left">Stuck to the left edge</string>
+    <string name="floating_mic_side_right">Stuck to the right edge</string>
+    <string name="floating_mic_layout_hint">Drag the button to move it. Its position is remembered separately for each screen layout (folded or unfolded, portrait or landscape), so it goes back to the right place when you fold, unfold or rotate your phone.</string>
+    <string name="floating_mic_reset">Reset positions</string>
+    <string name="floating_mic_reset_done">Button positions reset</string>
 </resources>
