@@ -1,0 +1,146 @@
+name: Android build
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Un push et une pull request sur la même branche lancent chacun un build ; les deux
+# supprimaient puis recréaient la même release "debug-<branche>" et s'entre-échouaient.
+# Un seul build à la fois par branche (le plus ancien est annulé) ; sur main, on ne
+# annule jamais : chaque merge doit garder sa release versionnée.
+concurrency:
+  group: android-build-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: ${{ github.ref_name != 'main' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Fix gradle.properties for CI
+        run: sed -i '/org.gradle.java.home/d' gradle.properties
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: |
+          sdkmanager --install "ndk;28.0.13004108"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.0.13004108" >> $GITHUB_ENV
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      # transcribe-cpp-sys compile son cœur C++ (whisper.cpp/ggml) avec CMake.
+      - name: Install CMake & Ninja
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # versionCode/versionName uniques et strictement croissants (run_number) :
+      # chaque build s'installe par-dessus le précédent.
+      - name: Déterminer la version
+        id: version
+        run: |
+          echo "code=$((1000 + ${{ github.run_number }}))" >> "$GITHUB_OUTPUT"
+          echo "name=0.1.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Assemble debug APK
+        run: |
+          ./gradlew assembleDebug --no-daemon \
+            -PtranscribeVersionCode=${{ steps.version.outputs.code }} \
+            -PtranscribeVersionName=${{ steps.version.outputs.name }}
+
+      - name: Renommer l'APK avec sa version
+        id: apk
+        run: |
+          NAME="OfflineVoiceInput-${{ steps.version.outputs.name }}.apk"
+          SRC="app/build/outputs/apk/debug/app-debug.apk"
+          DEST="app/build/outputs/apk/debug/$NAME"
+          mv "$SRC" "$DEST"
+          echo "path=$DEST" >> "$GITHUB_OUTPUT"
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: transcribe-debug-${{ github.run_number }}
+          path: ${{ steps.apk.outputs.path }}
+          if-no-files-found: error
+
+      # Release versionnée et permanente, seulement pour main. Signée avec la
+      # clé debug committée (pas de clé de production dans ce fork).
+      - name: Publier la release GitHub (main)
+        if: github.event_name != 'pull_request' && github.ref_name == 'main'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ steps.version.outputs.name }}"
+          gh release create "$TAG" \
+            "${{ steps.apk.outputs.path }}" \
+            --title "Offline Voice Input $TAG" \
+            --notes "Run #${{ github.run_number }} (${{ github.sha }}). Signé avec la clé debug." \
+            --target "${{ github.sha }}"
+
+      # Les artifacts d'Actions passent par Azure Blob Storage, souvent bloqué ;
+      # une release GitHub reste accessible. Un tag par branche, mis à jour à
+      # chaque build, donne un lien stable vers le dernier APK de la branche.
+      - name: Déterminer le tag de release debug
+        id: reltag
+        if: "!(github.event_name != 'pull_request' && github.ref_name == 'main')"
+        run: |
+          BRANCH="${{ github.head_ref || github.ref_name }}"
+          SAFE_BRANCH=$(echo "$BRANCH" | tr '/' '-')
+          echo "tag=debug-$SAFE_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Publier l'APK debug en release GitHub
+        if: "!(github.event_name != 'pull_request' && github.ref_name == 'main')"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.reltag.outputs.tag }}"
+          gh release delete "$TAG" --yes --cleanup-tag || true
+          gh release create "$TAG" \
+            "${{ steps.apk.outputs.path }}" \
+            --title "Offline Voice Input — APK debug (${{ steps.reltag.outputs.branch }})" \
+            --notes "Build automatique, run #${{ github.run_number }} (${{ github.sha }})." \
+            --prerelease \
+            --target "${{ github.sha }}"

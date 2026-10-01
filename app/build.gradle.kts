@@ -13,14 +13,24 @@ android {
         applicationId = "dev.notune.transcribe"
         minSdk = 26
         targetSdk = 35
-        versionCode = 19
-        versionName = "0.1.18"
+        // La CI (android-build.yml) surcharge ces valeurs avec le numéro de run.
+        versionCode = (project.findProperty("transcribeVersionCode") as String?)?.toInt() ?: 19
+        versionName = (project.findProperty("transcribeVersionName") as String?) ?: "0.1.18"
         ndk {
             abiFilters += "arm64-v8a"
         }
     }
 
     signingConfigs {
+        // Clé debug FIXE committée (app/debug.keystore, mot de passe "android"
+        // documenté par Google) : sans elle, chaque runner CI génère sa propre
+        // clé et Android refuse d'installer un build par-dessus le précédent.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         create("release") {
             val ksFile = rootProject.file("release.keystore")
             if (ksFile.exists()) {
@@ -33,6 +43,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("release")
