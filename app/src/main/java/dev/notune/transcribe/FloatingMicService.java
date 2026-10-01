@@ -70,6 +70,16 @@ public class FloatingMicService extends Service {
         mainHandler = new Handler(Looper.getMainLooper());
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         createNotificationChannel();
+        DictationAccessibilityService.setKeyboardListener(visible -> mainHandler.post(this::updateVisibility));
+    }
+
+    /** Only shown while the keyboard is open (or busy); always shown if the accessibility service is off. */
+    private void updateVisibility() {
+        if (bubble == null) return;
+        boolean show = !DictationAccessibilityService.isRunning()
+                || DictationAccessibilityService.isKeyboardVisible()
+                || isRecording || isProcessing;
+        bubble.setVisibility(show ? View.VISIBLE : View.GONE);
     }
 
     @Override
@@ -175,6 +185,7 @@ public class FloatingMicService extends Service {
         });
 
         windowManager.addView(bubble, params);
+        updateVisibility();
     }
 
     private void onBubbleTapped() {
@@ -218,7 +229,7 @@ public class FloatingMicService extends Service {
             mainHandler.post(() -> {
                 isRecording = false;
                 isProcessing = false;
-                if (bubble != null) setBubbleState(false);
+                if (bubble != null) { setBubbleState(false); updateVisibility(); }
                 Toast.makeText(this, s, Toast.LENGTH_LONG).show();
             });
         }
@@ -237,7 +248,7 @@ public class FloatingMicService extends Service {
     public void onTextTranscribed(String text) {
         mainHandler.post(() -> {
             isProcessing = false;
-            if (bubble != null) setBubbleState(false);
+            if (bubble != null) { setBubbleState(false); updateVisibility(); }
             if (text == null || text.trim().isEmpty()) return;
             if (!DictationAccessibilityService.insert(this, text)) {
                 Toast.makeText(this, R.string.floating_mic_copied, Toast.LENGTH_LONG).show();
@@ -249,6 +260,7 @@ public class FloatingMicService extends Service {
 
     @Override
     public void onDestroy() {
+        DictationAccessibilityService.setKeyboardListener(null);
         if (isRecording) {
             try { cancelRecording(); } catch (Throwable t) { /* ignore */ }
         }
