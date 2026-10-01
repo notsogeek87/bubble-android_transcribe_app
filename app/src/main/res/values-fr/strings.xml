@@ -117,4 +117,13 @@
     <string name="floating_mic_a11y">Activer la saisie du texte</string>
     <string name="floating_mic_a11y_hint">Facultatif mais recommandé : activez « Offline Voice Input » dans Accessibilité pour que le texte soit saisi directement dans le champ. Sinon, il est seulement copié dans le presse-papiers.</string>
     <string name="a11y_dictation_description">Saisit le texte dicté avec le bouton micro flottant dans le champ actif. Rien n\'est lu ni enregistré à l\'écran.</string>
+    <string name="floating_mic_size">Taille du bouton</string>
+    <string name="floating_mic_opacity">Opacité</string>
+    <string name="floating_mic_side">Position</string>
+    <string name="floating_mic_side_free">Libre (à déplacer où vous voulez)</string>
+    <string name="floating_mic_side_left">Collé au bord gauche</string>
+    <string name="floating_mic_side_right">Collé au bord droit</string>
+    <string name="floating_mic_layout_hint">Faites glisser le bouton pour le déplacer. Sa position est mémorisée séparément pour chaque disposition d\'écran (fermé ou ouvert, portrait ou paysage) : il retrouve sa place quand vous pliez, dépliez ou tournez le téléphone.</string>
+    <string name="floating_mic_reset">Réinitialiser les positions</string>
+    <string name="floating_mic_reset_done">Positions du bouton réinitialisées</string>
 </resources>

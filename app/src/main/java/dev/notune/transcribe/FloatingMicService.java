@@ -11,11 +11,14 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.graphics.PixelFormat;
+import android.hardware.display.DisplayManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.Display;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -32,10 +35,10 @@ import android.widget.Toast;
 public class FloatingMicService extends Service {
     private static final String TAG = "FloatingMicService";
     public static final String ACTION_START = "dev.notune.transcribe.START_FLOATING_MIC";
+    public static final String ACTION_REFRESH = "dev.notune.transcribe.REFRESH_FLOATING_MIC";
     public static final String ACTION_STOP = "dev.notune.transcribe.STOP_FLOATING_MIC";
     private static final String CHANNEL_ID = "FloatingMicChannel";
     private static final int NOTIFICATION_ID = 12346;
-    private static final int BUBBLE_DP = 56;
 
     static {
         try {
@@ -54,9 +57,32 @@ public class FloatingMicService extends Service {
     private boolean nativeReady = false;
     private boolean isRecording = false;
     private boolean isProcessing = false;
+    private float opacity = 1f;
+    private float density = 1f;
+    private DisplayManager displayManager;
+    private final Runnable repositionRunnable = this::repositionForScreen;
+    private final DisplayManager.DisplayListener displayListener = new DisplayManager.DisplayListener() {
+        @Override public void onDisplayAdded(int displayId) { }
+        @Override public void onDisplayRemoved(int displayId) { }
+        @Override public void onDisplayChanged(int displayId) {
+            // Fold/unfold and rotation: wait for the new size to settle, then re-place the bubble.
+            mainHandler.removeCallbacks(repositionRunnable);
+            mainHandler.postDelayed(repositionRunnable, 200);
+        }
+    };
 
     public static void start(Context ctx) {
-        Intent i = new Intent(ctx, FloatingMicService.class).setAction(ACTION_START);
+        start(ctx, ACTION_START);
+    }
+
+    /** Re-applies size/opacity/side settings to the running bubble. */
+    public static void refresh(Context ctx) {
+        if (!FloatingMicPrefs.isEnabled(ctx)) return;
+        start(ctx, ACTION_REFRESH);
+    }
+
+    private static void start(Context ctx, String action) {
+        Intent i = new Intent(ctx, FloatingMicService.class).setAction(action);
         if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(i); else ctx.startService(i);
     }
 
@@ -69,6 +95,8 @@ public class FloatingMicService extends Service {
         super.onCreate();
         mainHandler = new Handler(Looper.getMainLooper());
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+        displayManager = (DisplayManager) getSystemService(DISPLAY_SERVICE);
+        density = getResources().getDisplayMetrics().density;
         createNotificationChannel();
         DictationAccessibilityService.setKeyboardListener(visible -> mainHandler.post(this::updateVisibility));
     }
@@ -110,6 +138,11 @@ public class FloatingMicService extends Service {
             return START_NOT_STICKY;
         }
 
+        if (bubble != null && intent != null && ACTION_REFRESH.equals(intent.getAction())) {
+            applySettings();
+            return START_STICKY;
+        }
+
         if (bubble == null) {
             initNative(this);
             nativeReady = true;
@@ -118,10 +151,73 @@ public class FloatingMicService extends Service {
         return START_STICKY;
     }
 
+    /** Real size in pixels of the screen currently in use (changes when a foldable folds or rotates). */
+    private int[] screenSize() {
+        Display display = displayManager.getDisplay(Display.DEFAULT_DISPLAY);
+        DisplayMetrics m = new DisplayMetrics();
+        display.getRealMetrics(m);
+        return new int[]{m.widthPixels, m.heightPixels};
+    }
+
+    /** Positions are remembered per screen size, so each fold/rotation layout keeps its own spot. */
+    private String screenKey() {
+        int[] s = screenSize();
+        return s[0] + "x" + s[1];
+    }
+
+    private int bubbleSizePx() {
+        return (int) (FloatingMicPrefs.getSizeDp(this) * density);
+    }
+
+    private void placeFromPrefs() {
+        int[] s = screenSize();
+        int maxX = Math.max(0, s[0] - params.width);
+        int maxY = Math.max(0, s[1] - params.height);
+        float[] saved = FloatingMicPrefs.getPosition(this, screenKey());
+        float xf = saved != null ? saved[0] : 1f;
+        float yf = saved != null ? saved[1] : 0.5f;
+        int side = FloatingMicPrefs.getSide(this);
+        if (side == FloatingMicPrefs.SIDE_LEFT) xf = 0f;
+        else if (side == FloatingMicPrefs.SIDE_RIGHT) xf = 1f;
+        params.x = Math.round(Math.max(0f, Math.min(1f, xf)) * maxX);
+        params.y = Math.round(Math.max(0f, Math.min(1f, yf)) * maxY);
+    }
+
+    private void savePosition() {
+        int[] s = screenSize();
+        int maxX = Math.max(0, s[0] - params.width);
+        int maxY = Math.max(0, s[1] - params.height);
+        float xf = maxX > 0 ? (float) params.x / maxX : 1f;
+        float yf = maxY > 0 ? (float) params.y / maxY : 0.5f;
+        FloatingMicPrefs.setPosition(this, screenKey(), xf, yf);
+    }
+
+    private void repositionForScreen() {
+        if (bubble == null) return;
+        placeFromPrefs();
+        windowManager.updateViewLayout(bubble, params);
+    }
+
+    /** Applies size, opacity and side from the settings to the live bubble. */
+    private void applySettings() {
+        if (bubble == null) return;
+        int size = bubbleSizePx();
+        opacity = FloatingMicPrefs.getOpacity(this) / 100f;
+        params.width = size;
+        params.height = size;
+        int pad = size / 4;
+        micIcon.setPadding(pad, pad, pad, pad);
+        micIcon.setLayoutParams(new FrameLayout.LayoutParams(size, size));
+        bubble.setAlpha(isProcessing ? opacity * 0.6f : opacity);
+        placeFromPrefs();
+        windowManager.updateViewLayout(bubble, params);
+    }
+
     @SuppressLint("ClickableViewAccessibility")
     private void addBubble() {
-        float d = getResources().getDisplayMetrics().density;
-        int size = (int) (BUBBLE_DP * d);
+        float d = density;
+        int size = bubbleSizePx();
+        opacity = FloatingMicPrefs.getOpacity(this) / 100f;
 
         bubble = new FrameLayout(this);
         bubble.setBackgroundResource(R.drawable.bg_floating_mic);
@@ -130,7 +226,7 @@ public class FloatingMicService extends Service {
 
         micIcon = new ImageView(this);
         micIcon.setImageResource(R.drawable.ic_mic);
-        int pad = (int) (14 * d);
+        int pad = size / 4;
         micIcon.setPadding(pad, pad, pad, pad);
         bubble.addView(micIcon, new FrameLayout.LayoutParams(size, size));
 
@@ -142,9 +238,7 @@ public class FloatingMicService extends Service {
                         | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.START;
-        int[] saved = FloatingMicPrefs.getPosition(this);
-        params.x = saved != null ? saved[0] : getResources().getDisplayMetrics().widthPixels - size;
-        params.y = saved != null ? saved[1] : getResources().getDisplayMetrics().heightPixels / 2;
+        placeFromPrefs();
 
         final int touchSlop = (int) (8 * d);
         bubble.setOnTouchListener(new View.OnTouchListener() {
@@ -167,14 +261,19 @@ public class FloatingMicService extends Service {
                         int dy = (int) (e.getRawY() - downY);
                         if (!dragging && Math.abs(dx) + Math.abs(dy) > touchSlop) dragging = true;
                         if (dragging) {
-                            params.x = startX + dx;
-                            params.y = startY + dy;
+                            int[] s = screenSize();
+                            boolean fixedSide = FloatingMicPrefs.getSide(FloatingMicService.this)
+                                    != FloatingMicPrefs.SIDE_FREE;
+                            if (!fixedSide) {
+                                params.x = Math.max(0, Math.min(s[0] - params.width, startX + dx));
+                            }
+                            params.y = Math.max(0, Math.min(s[1] - params.height, startY + dy));
                             windowManager.updateViewLayout(bubble, params);
                         }
                         return true;
                     case MotionEvent.ACTION_UP:
                         if (dragging) {
-                            FloatingMicPrefs.setPosition(FloatingMicService.this, params.x, params.y);
+                            savePosition();
                         } else {
                             onBubbleTapped();
                         }
@@ -185,6 +284,8 @@ public class FloatingMicService extends Service {
         });
 
         windowManager.addView(bubble, params);
+        bubble.setAlpha(opacity);
+        displayManager.registerDisplayListener(displayListener, mainHandler);
         updateVisibility();
     }
 
@@ -203,14 +304,14 @@ public class FloatingMicService extends Service {
         if (!isRecording) return;
         isRecording = false;
         isProcessing = true;
-        bubble.setAlpha(0.6f);
+        bubble.setAlpha(opacity * 0.6f);
         stopRecording();
     }
 
     private void setBubbleState(boolean recording) {
         bubble.setScaleX(1f);
         bubble.setScaleY(1f);
-        bubble.setAlpha(1f);
+        bubble.setAlpha(opacity);
         micIcon.setColorFilter(recording ? 0xFFFF5252 : 0xFFFFFFFF);
     }
 
@@ -261,6 +362,8 @@ public class FloatingMicService extends Service {
     @Override
     public void onDestroy() {
         DictationAccessibilityService.setKeyboardListener(null);
+        displayManager.unregisterDisplayListener(displayListener);
+        mainHandler.removeCallbacks(repositionRunnable);
         if (isRecording) {
             try { cancelRecording(); } catch (Throwable t) { /* ignore */ }
         }
