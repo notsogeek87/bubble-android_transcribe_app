@@ -5,10 +5,12 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -21,6 +23,7 @@ public class DictationAccessibilityService extends AccessibilityService {
         void onKeyboardVisibilityChanged(boolean visible);
     }
 
+    private static final String TAG = "DictationA11y";
     private static volatile DictationAccessibilityService instance;
     private static volatile KeyboardListener keyboardListener;
     private static volatile boolean keyboardVisible;
@@ -88,20 +91,50 @@ public class DictationAccessibilityService extends AccessibilityService {
         return true;
     }
 
+    private static boolean isTextField(AccessibilityNodeInfo n) {
+        if (n.isEditable()) return true;
+        CharSequence cls = n.getClassName();
+        if (cls != null && cls.toString().contains("EditText")) return true;
+        return n.getActionList().contains(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_TEXT);
+    }
+
+    /**
+     * Finds the text field being typed in. Native fields report input focus directly;
+     * web views, Compose and cross-platform UIs often don't, so fall back to scanning the tree.
+     */
     private AccessibilityNodeInfo findFocusedEditable() {
-        AccessibilityNodeInfo root = getRootInActiveWindow();
-        if (root != null) {
-            AccessibilityNodeInfo f = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
-            if (f != null && f.isEditable()) return f;
-        }
-        // The active window can be the keyboard or an overlay: look in every app window.
-        List<AccessibilityWindowInfo> windows = getWindows();
-        for (AccessibilityWindowInfo w : windows) {
-            if (w.getType() != AccessibilityWindowInfo.TYPE_APPLICATION) continue;
+        List<AccessibilityNodeInfo> roots = new ArrayList<>();
+        AccessibilityNodeInfo active = getRootInActiveWindow();
+        if (active != null) roots.add(active);
+        for (AccessibilityWindowInfo w : getWindows()) {
+            int type = w.getType();
+            if (type != AccessibilityWindowInfo.TYPE_APPLICATION
+                    && type != AccessibilityWindowInfo.TYPE_SYSTEM) continue;
             AccessibilityNodeInfo r = w.getRoot();
-            if (r == null) continue;
-            AccessibilityNodeInfo f = r.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
-            if (f != null && f.isEditable()) return f;
+            if (r != null) roots.add(r);
+        }
+
+        for (AccessibilityNodeInfo r : roots) {
+            for (int focusType : new int[]{AccessibilityNodeInfo.FOCUS_INPUT,
+                    AccessibilityNodeInfo.FOCUS_ACCESSIBILITY}) {
+                AccessibilityNodeInfo f = r.findFocus(focusType);
+                if (f != null && isTextField(f)) return f;
+            }
+        }
+        for (AccessibilityNodeInfo r : roots) {
+            AccessibilityNodeInfo f = scanForFocusedField(r, new int[]{0});
+            if (f != null) return f;
+        }
+        Log.d(TAG, "No focused text field found in " + roots.size() + " window(s)");
+        return null;
+    }
+
+    private static AccessibilityNodeInfo scanForFocusedField(AccessibilityNodeInfo n, int[] budget) {
+        if (n == null || budget[0]++ > 3000) return null;
+        if (n.isFocused() && isTextField(n)) return n;
+        for (int i = 0; i < n.getChildCount(); i++) {
+            AccessibilityNodeInfo f = scanForFocusedField(n.getChild(i), budget);
+            if (f != null) return f;
         }
         return null;
     }
