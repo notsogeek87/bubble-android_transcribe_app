@@ -79,6 +79,32 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
+        CompoundButton floatingSwitch = findViewById(R.id.switch_floating_mic);
+        floatingSwitch.setChecked(FloatingMicPrefs.isEnabled(this));
+        floatingSwitch.setOnCheckedChangeListener((btn, on) -> {
+            if (!on) {
+                FloatingMicPrefs.setEnabled(this, false);
+                FloatingMicService.stop(this);
+                return;
+            }
+            if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
+                    != PackageManager.PERMISSION_GRANTED) {
+                btn.setChecked(false);
+                snackbar(getString(R.string.floating_mic_need_mic));
+                checkAndRequestPermissions();
+            } else if (!android.provider.Settings.canDrawOverlays(this)) {
+                btn.setChecked(false);
+                snackbar(getString(R.string.floating_mic_need_overlay));
+                startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        android.net.Uri.parse("package:" + getPackageName())));
+            } else {
+                FloatingMicPrefs.setEnabled(this, true);
+                FloatingMicService.start(this);
+            }
+        });
+        findViewById(R.id.btn_floating_a11y).setOnClickListener(v ->
+                startActivity(new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)));
+
         findViewById(R.id.btn_subs_advanced).setOnClickListener(v -> showSubsAdvancedDialog());
 
         findViewById(R.id.btn_models).setOnClickListener(v ->
