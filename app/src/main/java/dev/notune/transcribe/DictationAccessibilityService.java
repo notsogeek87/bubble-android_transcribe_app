@@ -144,11 +144,11 @@ public class DictationAccessibilityService extends AccessibilityService {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     // Accessibility events about the keyboard closing arrive late, so while it is
-    // open we also check the windows ourselves a few times per second.
+    // open we also check the windows ourselves about 20 times per second.
     private final Runnable keyboardPoll = new Runnable() {
         @Override public void run() {
             updateKeyboardVisibility();
-            if (keyboardVisible) handler.postDelayed(this, 120);
+            if (keyboardVisible) handler.postDelayed(this, 50);
         }
     };
 
@@ -159,7 +159,15 @@ public class DictationAccessibilityService extends AccessibilityService {
             if (w.getType() != AccessibilityWindowInfo.TYPE_INPUT_METHOD) continue;
             w.getBoundsInScreen(r);
             // A keyboard sliding away or collapsed to nothing no longer counts.
-            if (r.height() > 0 && r.top < screenHeight) return true;
+            if (r.height() <= 0 || r.top >= screenHeight) continue;
+            // The keyboard's window lingers a moment after it is hidden, but its content
+            // stops being visible straight away.
+            AccessibilityNodeInfo root = w.getRoot();
+            if (root != null) {
+                root.refresh();
+                if (!root.isVisibleToUser()) continue;
+            }
+            return true;
         }
         return false;
     }
@@ -169,7 +177,7 @@ public class DictationAccessibilityService extends AccessibilityService {
         if (visible == keyboardVisible) return;
         keyboardVisible = visible;
         handler.removeCallbacks(keyboardPoll);
-        if (visible) handler.postDelayed(keyboardPoll, 120);
+        if (visible) handler.postDelayed(keyboardPoll, 50);
         KeyboardListener l = keyboardListener;
         if (l != null) l.onKeyboardVisibilityChanged(visible);
     }
