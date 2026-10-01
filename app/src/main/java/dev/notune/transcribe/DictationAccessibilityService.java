@@ -4,7 +4,10 @@ import android.accessibilityservice.AccessibilityService;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.graphics.Rect;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -139,17 +142,34 @@ public class DictationAccessibilityService extends AccessibilityService {
         return null;
     }
 
-    private void updateKeyboardVisibility() {
-        boolean visible = false;
-        List<AccessibilityWindowInfo> windows = getWindows();
-        for (AccessibilityWindowInfo w : windows) {
-            if (w.getType() == AccessibilityWindowInfo.TYPE_INPUT_METHOD) {
-                visible = true;
-                break;
-            }
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    // Accessibility events about the keyboard closing arrive late, so while it is
+    // open we also check the windows ourselves a few times per second.
+    private final Runnable keyboardPoll = new Runnable() {
+        @Override public void run() {
+            updateKeyboardVisibility();
+            if (keyboardVisible) handler.postDelayed(this, 120);
         }
+    };
+
+    private boolean isKeyboardWindowShown() {
+        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+        Rect r = new Rect();
+        for (AccessibilityWindowInfo w : getWindows()) {
+            if (w.getType() != AccessibilityWindowInfo.TYPE_INPUT_METHOD) continue;
+            w.getBoundsInScreen(r);
+            // A keyboard sliding away or collapsed to nothing no longer counts.
+            if (r.height() > 0 && r.top < screenHeight) return true;
+        }
+        return false;
+    }
+
+    private void updateKeyboardVisibility() {
+        boolean visible = isKeyboardWindowShown();
         if (visible == keyboardVisible) return;
         keyboardVisible = visible;
+        handler.removeCallbacks(keyboardPoll);
+        if (visible) handler.postDelayed(keyboardPoll, 120);
         KeyboardListener l = keyboardListener;
         if (l != null) l.onKeyboardVisibilityChanged(visible);
     }
@@ -164,6 +184,7 @@ public class DictationAccessibilityService extends AccessibilityService {
     @Override
     public boolean onUnbind(android.content.Intent intent) {
         instance = null;
+        handler.removeCallbacks(keyboardPoll);
         keyboardVisible = false;
         KeyboardListener l = keyboardListener;
         if (l != null) l.onKeyboardVisibilityChanged(false);

@@ -7,4 +7,4 @@
     android:accessibilityFlags="flagRetrieveInteractiveWindows|flagIncludeNotImportantViews|flagRequestEnhancedWebAccessibility"
     android:canRetrieveWindowContent="true"
     android:description="@string/a11y_dictation_description"
-    android:notificationTimeout="100" />
+    android:notificationTimeout="0" />
