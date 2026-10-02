@@ -56,6 +56,7 @@ public class FloatingMicService extends Service {
     private Handler mainHandler;
     private boolean nativeReady = false;
     private boolean isRecording = false;
+    private final AudioFocusPauser audioPauser = new AudioFocusPauser();
     private boolean isProcessing = false;
     private float opacity = 1f;
     private float density = 1f;
@@ -294,6 +295,7 @@ public class FloatingMicService extends Service {
         if (!isRecording) {
             isRecording = true;
             setBubbleState(true);
+            if (AudioFocusPauser.isEnabled(this)) audioPauser.request(this);
             startRecording(isAutoStopEnabled());
         } else {
             finishRecording();
@@ -306,6 +308,7 @@ public class FloatingMicService extends Service {
         isProcessing = true;
         bubble.setAlpha(opacity * 0.6f);
         stopRecording();
+        audioPauser.abandon(this);
     }
 
     private void setBubbleState(boolean recording) {
@@ -330,6 +333,7 @@ public class FloatingMicService extends Service {
             mainHandler.post(() -> {
                 isRecording = false;
                 isProcessing = false;
+                audioPauser.abandon(this);
                 if (bubble != null) { setBubbleState(false); updateVisibility(); }
                 Toast.makeText(this, s, Toast.LENGTH_LONG).show();
             });
@@ -367,6 +371,7 @@ public class FloatingMicService extends Service {
         if (isRecording) {
             try { cancelRecording(); } catch (Throwable t) { /* ignore */ }
         }
+        audioPauser.abandon(this);
         if (bubble != null) {
             try { windowManager.removeView(bubble); } catch (Exception ignored) { }
             bubble = null;

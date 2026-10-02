@@ -42,6 +42,7 @@ public class VoiceRecognitionService extends RecognitionService {
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private Callback mCallback;
+    private final AudioFocusPauser audioPauser = new AudioFocusPauser();
 
     @Override
     public void onCreate() {
@@ -64,9 +65,11 @@ public class VoiceRecognitionService extends RecognitionService {
             return;
         }
 
+        if (AudioFocusPauser.isEnabled(this)) audioPauser.request(this);
         try {
             startListening(this);
         } catch (Throwable t) {
+            audioPauser.abandon(this);
             Log.e(TAG, "startListening failed", t);
             safeError(SpeechRecognizer.ERROR_CLIENT);
         }
@@ -74,6 +77,7 @@ public class VoiceRecognitionService extends RecognitionService {
 
     @Override
     protected void onStopListening(Callback callback) {
+        audioPauser.abandon(this);
         try {
             stopListening();
         } catch (Throwable t) {
@@ -83,6 +87,7 @@ public class VoiceRecognitionService extends RecognitionService {
 
     @Override
     protected void onCancel(Callback callback) {
+        audioPauser.abandon(this);
         try {
             cancelNative();
         } catch (Throwable t) {
@@ -92,6 +97,7 @@ public class VoiceRecognitionService extends RecognitionService {
 
     @Override
     public void onDestroy() {
+        audioPauser.abandon(this);
         try {
             destroyNative();
         } catch (Throwable t) {
@@ -128,6 +134,7 @@ public class VoiceRecognitionService extends RecognitionService {
 
     public void onEndOfSpeech() {
         mainHandler.post(() -> {
+            audioPauser.abandon(this);
             Callback cb = mCallback;
             if (cb == null) return;
             try { cb.endOfSpeech(); } catch (RemoteException ignored) {}
@@ -136,6 +143,7 @@ public class VoiceRecognitionService extends RecognitionService {
 
     public void onResults(String text) {
         mainHandler.post(() -> {
+            audioPauser.abandon(this);
             Callback cb = mCallback;
             if (cb == null) return;
             ArrayList<String> hypotheses = new ArrayList<>();
@@ -149,6 +157,7 @@ public class VoiceRecognitionService extends RecognitionService {
 
     public void onError(int errorCode) {
         mainHandler.post(() -> {
+            audioPauser.abandon(this);
             Callback cb = mCallback;
             if (cb == null) return;
             try { cb.error(errorCode); } catch (RemoteException ignored) {}
@@ -162,6 +171,7 @@ public class VoiceRecognitionService extends RecognitionService {
     }
 
     private void safeError(int errorCode) {
+        audioPauser.abandon(this);
         Callback cb = mCallback;
         if (cb == null) return;
         try { cb.error(errorCode); } catch (RemoteException ignored) {}
