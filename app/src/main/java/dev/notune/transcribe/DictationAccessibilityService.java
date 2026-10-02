@@ -51,7 +51,7 @@ public class DictationAccessibilityService extends AccessibilityService {
 
     /**
      * Inserts {@code text} at the cursor of the focused editable field.
-     * Returns false (with the text left on the clipboard for a couple of minutes) if that is not possible.
+     * Returns false if that is not possible; the text is then dropped, never left on the clipboard.
      */
     public static boolean insert(Context ctx, String text) {
         DictationAccessibilityService svc = instance;
@@ -66,7 +66,6 @@ public class DictationAccessibilityService extends AccessibilityService {
                 if (done) return true;
             }
         }
-        ClipboardHelper.copy(ctx, text, ClipboardHelper.MANUAL_CLEAR_MS);
         return false;
     }
 

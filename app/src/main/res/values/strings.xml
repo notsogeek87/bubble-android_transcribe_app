@@ -117,11 +117,11 @@
     <string name="floating_mic_cd">Dictate</string>
     <string name="floating_mic_notif">The mic button is shown over your apps</string>
     <string name="floating_mic_hide">Hide</string>
-    <string name="floating_mic_copied">No text field focused: the text was copied to the clipboard (cleared in 2 min)</string>
+    <string name="floating_mic_copied">No text field focused: the text was not inserted</string>
     <string name="floating_mic_need_overlay">Allow “Display over other apps” for this app, then switch the button on again.</string>
     <string name="floating_mic_need_mic">Grant the microphone permission first.</string>
     <string name="floating_mic_a11y">Enable text insertion</string>
-    <string name="floating_mic_a11y_hint">Optional but recommended: enable “Offline Voice Input” under Accessibility so the text is typed directly into the field. Without it, the text is only copied to the clipboard.</string>
+    <string name="floating_mic_a11y_hint">Optional but recommended: enable “Offline Voice Input” under Accessibility so the text is typed directly into the field. Without it, the text cannot be inserted.</string>
     <string name="a11y_dictation_description">Types the text you dictate with the floating mic button into the focused field. It does not read or store anything on screen.</string>
     <string name="floating_mic_size">Button size</string>
     <string name="floating_mic_opacity">Opacity</string>
