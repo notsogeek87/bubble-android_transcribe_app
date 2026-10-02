@@ -111,7 +111,7 @@
     <string name="floating_mic_cd">Dicter</string>
     <string name="floating_mic_notif">Le bouton micro est affiché par-dessus vos apps</string>
     <string name="floating_mic_hide">Masquer</string>
-    <string name="floating_mic_copied">Aucun champ actif : le texte a été copié dans le presse-papiers</string>
+    <string name="floating_mic_copied">Aucun champ actif : le texte a été copié dans le presse-papiers (effacé dans 2 min)</string>
     <string name="floating_mic_need_overlay">Autorisez « Affichage par-dessus d\'autres apps » pour cette app, puis réactivez le bouton.</string>
     <string name="floating_mic_need_mic">Accordez d\'abord l\'autorisation du micro.</string>
     <string name="floating_mic_a11y">Activer la saisie du texte</string>

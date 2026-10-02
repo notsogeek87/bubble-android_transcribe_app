@@ -82,9 +82,25 @@ jobs:
           echo "code=$((1000 + ${{ github.run_number }}))" >> "$GITHUB_OUTPUT"
           echo "name=0.1.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
-      - name: Assemble debug APK
+      # Signé avec la clé privée des secrets du dépôt (voir README, « Signature »).
+      # Sans elle on échoue plutôt que de publier un APK signé avec une clé publique.
+      - name: Récupérer la clé de signature
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          ./gradlew assembleDebug --no-daemon \
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Secret KEYSTORE_BASE64 absent : ajoute la clé de signature (voir README, « Signature »)."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > release.keystore
+
+      - name: Assemble release APK
+        env:
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.KEY_PASS }}
+          STORE_PASS: ${{ secrets.STORE_PASS }}
+        run: |
+          ./gradlew assembleRelease --no-daemon \
             -PtranscribeVersionCode=${{ steps.version.outputs.code }} \
             -PtranscribeVersionName=${{ steps.version.outputs.name }}
 
@@ -92,20 +108,19 @@ jobs:
         id: apk
         run: |
           NAME="OfflineVoiceInput-${{ steps.version.outputs.name }}.apk"
-          SRC="app/build/outputs/apk/debug/app-debug.apk"
-          DEST="app/build/outputs/apk/debug/$NAME"
+          SRC="app/build/outputs/apk/release/app-release.apk"
+          DEST="app/build/outputs/apk/release/$NAME"
           mv "$SRC" "$DEST"
           echo "path=$DEST" >> "$GITHUB_OUTPUT"
 
-      - name: Upload debug APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: transcribe-debug-${{ github.run_number }}
+          name: transcribe-${{ github.run_number }}
           path: ${{ steps.apk.outputs.path }}
           if-no-files-found: error
 
-      # Release versionnée et permanente, seulement pour main. Signée avec la
-      # clé debug committée (pas de clé de production dans ce fork).
+      # Release versionnée et permanente, seulement pour main.
       - name: Publier la release GitHub (main)
         if: github.event_name != 'pull_request' && github.ref_name == 'main'
         env:
@@ -115,7 +130,7 @@ jobs:
           gh release create "$TAG" \
             "${{ steps.apk.outputs.path }}" \
             --title "Offline Voice Input $TAG" \
-            --notes "Run #${{ github.run_number }} (${{ github.sha }}). Signé avec la clé debug." \
+            --notes "Run #${{ github.run_number }} (${{ github.sha }})." \
             --target "${{ github.sha }}"
 
       # Les artifacts d'Actions passent par Azure Blob Storage, souvent bloqué ;
@@ -139,7 +154,7 @@ jobs:
           gh release delete "$TAG" --yes --cleanup-tag || true
           gh release create "$TAG" \
             "${{ steps.apk.outputs.path }}" \
-            --title "Offline Voice Input — APK debug (${{ steps.reltag.outputs.branch }})" \
+            --title "Offline Voice Input — APK de test (${{ steps.reltag.outputs.branch }})" \
             --notes "Build automatique, run #${{ github.run_number }} (${{ github.sha }})." \
             --prerelease \
             --target "${{ github.sha }}"
