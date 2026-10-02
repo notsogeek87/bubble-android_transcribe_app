@@ -73,6 +73,9 @@ public class DictationAccessibilityService extends AccessibilityService {
     private static boolean setText(AccessibilityNodeInfo field, String text) {
         CharSequence current = field.isShowingHintText() ? null : field.getText();
         String old = current == null ? "" : current.toString();
+        // Some apps (Telegram) expose the placeholder as the field's text without flagging it.
+        CharSequence hint = field.getHintText();
+        if (hint != null && old.contentEquals(hint)) old = "";
         int start = field.getTextSelectionStart();
         int end = field.getTextSelectionEnd();
         if (start < 0 || end < 0 || start > old.length() || end > old.length()) {
