@@ -131,6 +131,11 @@ public class MainActivity extends AppCompatActivity {
             FloatingMicService.refresh(this);
         });
 
+        CompoundButton stopZoneSwitch = findViewById(R.id.switch_floating_stop_zone);
+        stopZoneSwitch.setChecked(FloatingMicPrefs.isStopZoneEnabled(this));
+        stopZoneSwitch.setOnCheckedChangeListener((btn, on) ->
+                FloatingMicPrefs.setStopZoneEnabled(this, on));
+
         findViewById(R.id.btn_floating_reset).setOnClickListener(v -> {
             FloatingMicPrefs.resetPositions(this);
             FloatingMicService.refresh(this);

@@ -28,6 +28,8 @@ public class DictationAccessibilityService extends AccessibilityService {
     private static volatile DictationAccessibilityService instance;
     private static volatile KeyboardListener keyboardListener;
     private static volatile boolean keyboardVisible;
+    /** Screen rectangle of the keyboard while it is shown; null otherwise. */
+    private static volatile Rect keyboardBounds;
 
     public static boolean isRunning() {
         return instance != null;
@@ -35,6 +37,12 @@ public class DictationAccessibilityService extends AccessibilityService {
 
     public static boolean isKeyboardVisible() {
         return keyboardVisible;
+    }
+
+    /** A copy of the keyboard's on-screen rectangle, or null when no keyboard is shown. */
+    public static Rect getKeyboardBounds() {
+        Rect b = keyboardBounds;
+        return b == null ? null : new Rect(b);
     }
 
     public static void setKeyboardListener(KeyboardListener l) {
@@ -148,7 +156,8 @@ public class DictationAccessibilityService extends AccessibilityService {
         }
     };
 
-    private boolean isKeyboardWindowShown() {
+    /** Bounds of the visible keyboard window, or null if there is none. */
+    private Rect findKeyboardBounds() {
         int screenHeight = getResources().getDisplayMetrics().heightPixels;
         Rect r = new Rect();
         for (AccessibilityWindowInfo w : getWindows()) {
@@ -163,17 +172,23 @@ public class DictationAccessibilityService extends AccessibilityService {
                 root.refresh();
                 if (!root.isVisibleToUser()) continue;
             }
-            return true;
+            return new Rect(r);
         }
-        return false;
+        return null;
     }
 
     private void updateKeyboardVisibility() {
-        boolean visible = isKeyboardWindowShown();
-        if (visible == keyboardVisible) return;
-        keyboardVisible = visible;
-        handler.removeCallbacks(keyboardPoll);
-        if (visible) handler.postDelayed(keyboardPoll, 50);
+        Rect bounds = findKeyboardBounds();
+        boolean visible = bounds != null;
+        boolean visibilityChanged = visible != keyboardVisible;
+        boolean boundsChanged = visible && !bounds.equals(keyboardBounds);
+        keyboardBounds = bounds;
+        if (!visibilityChanged && !boundsChanged) return;
+        if (visibilityChanged) {
+            keyboardVisible = visible;
+            handler.removeCallbacks(keyboardPoll);
+            if (visible) handler.postDelayed(keyboardPoll, 50);
+        }
         KeyboardListener l = keyboardListener;
         if (l != null) l.onKeyboardVisibilityChanged(visible);
     }
@@ -190,6 +205,7 @@ public class DictationAccessibilityService extends AccessibilityService {
         instance = null;
         handler.removeCallbacks(keyboardPoll);
         keyboardVisible = false;
+        keyboardBounds = null;
         KeyboardListener l = keyboardListener;
         if (l != null) l.onKeyboardVisibilityChanged(false);
         return super.onUnbind(intent);

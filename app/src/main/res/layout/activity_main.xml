@@ -290,6 +290,20 @@
                             android:text="@string/floating_mic_side_right"/>
                     </RadioGroup>
 
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_floating_stop_zone"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/floating_mic_stop_zone"/>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/floating_mic_stop_zone_desc"
+                        android:textAppearance="?attr/textAppearanceBodySmall"
+                        android:textColor="?attr/colorOnSurfaceVariant"/>
+
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.graphics.PixelFormat;
+import android.graphics.Rect;
 import android.hardware.display.DisplayManager;
 import android.os.Build;
 import android.os.Handler;
@@ -25,6 +26,8 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 /**
@@ -52,6 +55,9 @@ public class FloatingMicService extends Service {
     private WindowManager windowManager;
     private WindowManager.LayoutParams params;
     private FrameLayout bubble;
+    private FrameLayout stopZone;
+    private ImageView stopZoneIcon;
+    private WindowManager.LayoutParams stopZoneParams;
     private ImageView micIcon;
     private Handler mainHandler;
     private boolean nativeReady = false;
@@ -105,6 +111,7 @@ public class FloatingMicService extends Service {
     /** Only shown while the keyboard is open (or busy); always shown if the accessibility service is off. */
     private void updateVisibility() {
         if (bubble == null) return;
+        updateStopZone();
         boolean show = !DictationAccessibilityService.isRunning()
                 || DictationAccessibilityService.isKeyboardVisible()
                 || isRecording || isProcessing;
@@ -297,6 +304,7 @@ public class FloatingMicService extends Service {
             setBubbleState(true);
             if (AudioFocusPauser.isEnabled(this)) audioPauser.request(this);
             startRecording(isAutoStopEnabled());
+            updateStopZone();
         } else {
             finishRecording();
         }
@@ -306,9 +314,92 @@ public class FloatingMicService extends Service {
         if (!isRecording) return;
         isRecording = false;
         isProcessing = true;
+        removeStopZone();
         bubble.setAlpha(opacity * 0.6f);
         stopRecording();
         audioPauser.abandon(this);
+    }
+
+    /**
+     * While recording, a translucent zone over the keyboard stops the recording when
+     * tapped, so the finger that is about to press "send" doesn't have to travel back
+     * to the bubble. It follows the keyboard's rectangle, and is only drawn when that
+     * rectangle is known (accessibility service on) so it never covers app content.
+     */
+    @SuppressLint("ClickableViewAccessibility")
+    private void updateStopZone() {
+        Rect kb = DictationAccessibilityService.getKeyboardBounds();
+        boolean show = isRecording
+                && FloatingMicPrefs.isStopZoneEnabled(this)
+                && DictationAccessibilityService.isRunning()
+                && kb != null && kb.width() > 0 && kb.height() > 0;
+        if (!show) {
+            removeStopZone();
+            return;
+        }
+
+        if (stopZone == null) {
+            stopZone = new FrameLayout(this);
+            stopZone.setBackgroundColor(0x33FF5252);
+            stopZone.setContentDescription(getString(R.string.floating_mic_stop_zone_label));
+            // The mic "takes over" the keyboard: a big mic that pulses with the voice,
+            // like the bubble does, with the hint underneath.
+            LinearLayout content = new LinearLayout(this);
+            content.setOrientation(LinearLayout.VERTICAL);
+            content.setGravity(Gravity.CENTER);
+            stopZoneIcon = new ImageView(this);
+            stopZoneIcon.setImageResource(R.drawable.ic_mic);
+            stopZoneIcon.setColorFilter(0xFFFFFFFF);
+            int iconSize = (int) (72 * density);
+            content.addView(stopZoneIcon, new LinearLayout.LayoutParams(iconSize, iconSize));
+            TextView label = new TextView(this);
+            label.setText(R.string.floating_mic_stop_zone_label);
+            label.setTextColor(0xFFFFFFFF);
+            label.setTextSize(16);
+            label.setGravity(Gravity.CENTER);
+            label.setShadowLayer(4 * density, 0, 0, 0xFF000000);
+            content.addView(label, new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT));
+            stopZone.addView(content, new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.CENTER));
+            stopZone.setOnClickListener(v -> finishRecording());
+
+            // NOT_FOCUSABLE keeps the input focus in the app, so the text can still be typed in.
+            stopZoneParams = new WindowManager.LayoutParams(
+                    kb.width(), kb.height(),
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                            | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    PixelFormat.TRANSLUCENT);
+            stopZoneParams.gravity = Gravity.TOP | Gravity.START;
+            stopZoneParams.x = kb.left;
+            stopZoneParams.y = kb.top;
+            try {
+                windowManager.addView(stopZone, stopZoneParams);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to add the stop zone", e);
+                stopZone = null;
+            }
+        } else if (stopZoneParams.x != kb.left || stopZoneParams.y != kb.top
+                || stopZoneParams.width != kb.width() || stopZoneParams.height != kb.height()) {
+            stopZoneParams.x = kb.left;
+            stopZoneParams.y = kb.top;
+            stopZoneParams.width = kb.width();
+            stopZoneParams.height = kb.height();
+            try {
+                windowManager.updateViewLayout(stopZone, stopZoneParams);
+            } catch (Exception ignored) { }
+        }
+    }
+
+    private void removeStopZone() {
+        if (stopZone == null) return;
+        try { windowManager.removeView(stopZone); } catch (Exception ignored) { }
+        stopZone = null;
+        stopZoneIcon = null;
     }
 
     private void setBubbleState(boolean recording) {
@@ -334,6 +425,7 @@ public class FloatingMicService extends Service {
                 isRecording = false;
                 isProcessing = false;
                 audioPauser.abandon(this);
+                removeStopZone();
                 if (bubble != null) { setBubbleState(false); updateVisibility(); }
                 Toast.makeText(this, s, Toast.LENGTH_LONG).show();
             });
@@ -346,6 +438,10 @@ public class FloatingMicService extends Service {
                 float scale = 1f + 0.35f * Math.min(1f, level);
                 bubble.setScaleX(scale);
                 bubble.setScaleY(scale);
+                if (stopZoneIcon != null) {
+                    stopZoneIcon.setScaleX(scale);
+                    stopZoneIcon.setScaleY(scale);
+                }
             }
         });
     }
@@ -372,6 +468,7 @@ public class FloatingMicService extends Service {
             try { cancelRecording(); } catch (Throwable t) { /* ignore */ }
         }
         audioPauser.abandon(this);
+        removeStopZone();
         if (bubble != null) {
             try { windowManager.removeView(bubble); } catch (Exception ignored) { }
             bubble = null;

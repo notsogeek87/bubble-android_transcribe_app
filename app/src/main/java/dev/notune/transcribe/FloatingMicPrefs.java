@@ -66,6 +66,15 @@ public final class FloatingMicPrefs {
         writeSetting(ctx, "side", String.valueOf(side));
     }
 
+    /** Whether a large tap-to-stop zone covers the keyboard while recording (default on). */
+    public static boolean isStopZoneEnabled(Context ctx) {
+        return readInt(ctx, "stop_zone", 1) != 0;
+    }
+
+    public static void setStopZoneEnabled(Context ctx, boolean on) {
+        writeSetting(ctx, "stop_zone", on ? "1" : "0");
+    }
+
     // --- Position, remembered per screen layout -------------------------------
     // A foldable has several screen layouts (folded/unfolded x portrait/landscape),
     // each with its own size, so the position is stored as a fraction of the free
