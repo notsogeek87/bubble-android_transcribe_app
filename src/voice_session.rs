@@ -271,7 +271,7 @@ pub fn stop_recording(mut env: JNIEnv, state: &mut VoiceSessionState) {
         }
 
         if let Some(eng_arc) = engine::get_engine() {
-            let res = engine::transcribe_shared(&eng_arc, buffer);
+            let res = engine::transcribe_shared(&eng_arc, crate::audio::trim_silence(buffer));
 
             match res {
                 Ok(text) => {
