@@ -229,11 +229,12 @@ public class FloatingMicService extends Service {
 
         bubble = new FrameLayout(this);
         bubble.setBackgroundResource(R.drawable.bg_floating_mic);
-        bubble.setElevation(8 * d);
+        bubble.setElevation(2 * d);
         bubble.setContentDescription(getString(R.string.floating_mic_cd));
 
         micIcon = new ImageView(this);
         micIcon.setImageResource(R.drawable.ic_mic);
+        micIcon.setColorFilter(0xB3E8DEF8);
         int pad = size / 4;
         micIcon.setPadding(pad, pad, pad, pad);
         bubble.addView(micIcon, new FrameLayout.LayoutParams(size, size));
@@ -406,7 +407,7 @@ public class FloatingMicService extends Service {
         bubble.setScaleX(1f);
         bubble.setScaleY(1f);
         bubble.setAlpha(opacity);
-        micIcon.setColorFilter(recording ? 0xFFFF5252 : 0xFFFFFFFF);
+        micIcon.setColorFilter(recording ? 0xFFFF6B6B : 0xB3E8DEF8);
     }
 
     private boolean isAutoStopEnabled() {
