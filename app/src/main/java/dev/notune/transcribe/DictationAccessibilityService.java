@@ -57,11 +57,32 @@ public class DictationAccessibilityService extends AccessibilityService {
         DictationAccessibilityService svc = instance;
         if (svc != null) {
             AccessibilityNodeInfo field = svc.findFocusedEditable();
-            if (field != null && (setText(field, text) || paste(ctx, field, text))) {
-                return true;
+            if (field != null) {
+                // The app knows better than we do what is real text and what is placeholder,
+                // so for the apps that don't tell us, let it insert the text itself.
+                boolean done = exposesPlaceholderAsText(field)
+                        ? paste(ctx, field, text) || setText(field, text)
+                        : setText(field, text) || paste(ctx, field, text);
+                if (done) return true;
             }
         }
         ClipboardHelper.copy(ctx, text, ClipboardHelper.MANUAL_CLEAR_MS);
+        return false;
+    }
+
+    /**
+     * Apps whose text box reports its placeholder ("Message") as the field's text, with no
+     * hint or flag to tell it apart from what was typed. Merging our text with the exposed
+     * text would put the placeholder in front of the dictation.
+     */
+    private static final String[] PLACEHOLDER_AS_TEXT_PACKAGES = {"com.whatsapp", "com.whatsapp.w4b"};
+
+    private static boolean exposesPlaceholderAsText(AccessibilityNodeInfo field) {
+        CharSequence pkg = field.getPackageName();
+        if (pkg == null) return false;
+        for (String p : PLACEHOLDER_AS_TEXT_PACKAGES) {
+            if (p.contentEquals(pkg)) return true;
+        }
         return false;
     }
 
@@ -77,6 +98,8 @@ public class DictationAccessibilityService extends AccessibilityService {
         // Some apps (Telegram) expose the placeholder as the field's text without flagging it.
         CharSequence hint = field.getHintText();
         if (hint != null && old.contentEquals(hint)) old = "";
+        CharSequence desc = field.getContentDescription();
+        if (desc != null && old.contentEquals(desc)) old = "";
         int start = field.getTextSelectionStart();
         int end = field.getTextSelectionEnd();
         if (start < 0 || end < 0 || start > old.length() || end > old.length()) {
