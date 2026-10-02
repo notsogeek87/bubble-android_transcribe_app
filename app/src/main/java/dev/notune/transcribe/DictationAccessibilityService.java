@@ -1,8 +1,6 @@
 package dev.notune.transcribe;
 
 import android.accessibilityservice.AccessibilityService;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.graphics.Rect;
 import android.os.Bundle;
@@ -45,7 +43,7 @@ public class DictationAccessibilityService extends AccessibilityService {
 
     /**
      * Inserts {@code text} at the cursor of the focused editable field.
-     * Returns false (with the text left on the clipboard) if that is not possible.
+     * Returns false (with the text left on the clipboard for a couple of minutes) if that is not possible.
      */
     public static boolean insert(Context ctx, String text) {
         DictationAccessibilityService svc = instance;
@@ -55,17 +53,12 @@ public class DictationAccessibilityService extends AccessibilityService {
                 return true;
             }
         }
-        copy(ctx, text);
+        ClipboardHelper.copy(ctx, text, ClipboardHelper.MANUAL_CLEAR_MS);
         return false;
     }
 
-    private static void copy(Context ctx, String text) {
-        ClipboardManager cm = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-        cm.setPrimaryClip(ClipData.newPlainText("dictation", text));
-    }
-
     private static boolean paste(Context ctx, AccessibilityNodeInfo field, String text) {
-        copy(ctx, text);
+        ClipboardHelper.copy(ctx, text, ClipboardHelper.PASTE_CLEAR_MS);
         return field.performAction(AccessibilityNodeInfo.ACTION_PASTE);
     }
 

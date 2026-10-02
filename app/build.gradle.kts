@@ -22,30 +22,23 @@ android {
     }
 
     signingConfigs {
-        // Clé debug FIXE committée (app/debug.keystore, mot de passe "android"
-        // documenté par Google) : sans elle, chaque runner CI génère sa propre
-        // clé et Android refuse d'installer un build par-dessus le précédent.
-        getByName("debug") {
-            storeFile = file("debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
+        // Clé privée : en CI elle vient des secrets du dépôt (KEYSTORE_BASE64,
+        // STORE_PASS, KEY_ALIAS, KEY_PASS). Personne d'autre ne peut donc signer
+        // un APK qu'Android accepterait comme mise à jour de celui-ci.
         create("release") {
             val ksFile = rootProject.file("release.keystore")
             if (ksFile.exists()) {
+                fun secret(name: String) = System.getenv(name)
+                    ?: throw GradleException("Variable d'environnement $name manquante pour signer avec release.keystore")
                 storeFile = ksFile
-                storePassword = System.getenv("STORE_PASS") ?: "password"
-                keyAlias = System.getenv("KEY_ALIAS") ?: "release"
-                keyPassword = System.getenv("KEY_PASS") ?: "password"
+                storePassword = secret("STORE_PASS")
+                keyAlias = secret("KEY_ALIAS")
+                keyPassword = secret("KEY_PASS")
             }
         }
     }
 
     buildTypes {
-        debug {
-            signingConfig = signingConfigs.getByName("debug")
-        }
         release {
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("release")

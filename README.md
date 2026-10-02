@@ -139,6 +139,20 @@ export STORE_PASS=yourpassword
 
 The built-in Parakeet TDT GGUF model (~485 MB) is automatically downloaded from HuggingFace during the first build via a Gradle task. The checksum is verified with SHA-256. No manual download is needed.
 
+## Signature (CI de ce fork)
+
+Les APK publiés par la CI sont signés avec une clé privée stockée dans les secrets du dépôt, pour que personne d'autre ne puisse produire une « mise à jour » qu'Android accepterait. Sans ces secrets, le build échoue.
+
+1. Générer la clé une seule fois, sur ton ordinateur (garde le fichier et les mots de passe en lieu sûr : sans eux, impossible de publier une mise à jour) :
+   ```bash
+   keytool -genkeypair -v -keystore release.keystore -alias release \
+     -keyalg RSA -keysize 4096 -validity 10000
+   base64 -w0 release.keystore > release.keystore.b64
+   ```
+2. Dans GitHub → *Settings* → *Secrets and variables* → *Actions*, ajouter :
+   `KEYSTORE_BASE64` (contenu de `release.keystore.b64`), `STORE_PASS` (mot de passe du keystore), `KEY_ALIAS` (`release`), `KEY_PASS` (même mot de passe que `STORE_PASS`).
+3. Relancer le workflow. Les APK signés avec l'ancienne clé debug ne peuvent pas être mis à jour par les nouveaux : désinstaller l'app une fois, puis installer le nouvel APK.
+
 ## Project Structure
 
 ```
