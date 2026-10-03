@@ -178,21 +178,38 @@ public class DictationAccessibilityService extends AccessibilityService {
         }
     };
 
+    // A field gaining focus (the app opening its keyboard) is not always followed by a
+    // windows event we get, so re-check for a short while after it.
+    private int recheckLeft;
+    private final Runnable keyboardRecheck = new Runnable() {
+        @Override public void run() {
+            updateKeyboardVisibility();
+            if (--recheckLeft > 0) handler.postDelayed(this, 150);
+        }
+    };
+
     /** Bounds of the visible keyboard window, or null if there is none. */
     private Rect findKeyboardBounds() {
-        int screenHeight = getResources().getDisplayMetrics().heightPixels;
+        android.util.DisplayMetrics m = new android.util.DisplayMetrics();
+        ((android.view.WindowManager) getSystemService(WINDOW_SERVICE))
+                .getDefaultDisplay().getRealMetrics(m);
+        int screenHeight = m.heightPixels;
         Rect r = new Rect();
         for (AccessibilityWindowInfo w : getWindows()) {
             if (w.getType() != AccessibilityWindowInfo.TYPE_INPUT_METHOD) continue;
             w.getBoundsInScreen(r);
             // A keyboard sliding away or collapsed to nothing no longer counts.
+            Log.d(TAG, "IME window " + r + " screenH=" + screenHeight);
             if (r.height() <= 0 || r.top >= screenHeight) continue;
             // The keyboard's window lingers a moment after it is hidden, but its content
             // stops being visible straight away.
             AccessibilityNodeInfo root = w.getRoot();
             if (root != null) {
                 root.refresh();
-                if (!root.isVisibleToUser()) continue;
+                if (!root.isVisibleToUser()) {
+                    Log.d(TAG, "IME window not visible to user, ignored");
+                    continue;
+                }
             }
             return new Rect(r);
         }
@@ -226,6 +243,7 @@ public class DictationAccessibilityService extends AccessibilityService {
     public boolean onUnbind(android.content.Intent intent) {
         instance = null;
         handler.removeCallbacks(keyboardPoll);
+        handler.removeCallbacks(keyboardRecheck);
         keyboardVisible = false;
         keyboardBounds = null;
         KeyboardListener l = keyboardListener;
@@ -239,6 +257,10 @@ public class DictationAccessibilityService extends AccessibilityService {
         if (t == AccessibilityEvent.TYPE_WINDOWS_CHANGED
                 || t == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             updateKeyboardVisibility();
+        } else if (t == AccessibilityEvent.TYPE_VIEW_FOCUSED) {
+            recheckLeft = 10;
+            handler.removeCallbacks(keyboardRecheck);
+            handler.post(keyboardRecheck);
         }
     }
 
