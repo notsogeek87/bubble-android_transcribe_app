@@ -51,20 +51,13 @@ public class DictationAccessibilityService extends AccessibilityService {
 
     /**
      * Inserts {@code text} at the cursor of the focused editable field.
-     * Returns false if that is not possible; the text is then dropped, never left on the clipboard.
+     * Returns false if that is not possible; the text is then dropped. The clipboard is never used.
      */
     public static boolean insert(Context ctx, String text) {
         DictationAccessibilityService svc = instance;
         if (svc != null) {
             AccessibilityNodeInfo field = svc.findFocusedEditable();
-            if (field != null) {
-                // The app knows better than we do what is real text and what is placeholder,
-                // so for the apps that don't tell us, let it insert the text itself.
-                boolean done = exposesPlaceholderAsText(field)
-                        ? paste(ctx, field, text) || setText(field, text)
-                        : setText(field, text) || paste(ctx, field, text);
-                if (done) return true;
-            }
+            if (field != null) return setText(field, text, exposesPlaceholderAsText(field));
         }
         return false;
     }
@@ -85,15 +78,14 @@ public class DictationAccessibilityService extends AccessibilityService {
         return false;
     }
 
-    private static boolean paste(Context ctx, AccessibilityNodeInfo field, String text) {
-        ClipboardHelper.copy(ctx, text, ClipboardHelper.PASTE_CLEAR_MS);
-        return field.performAction(AccessibilityNodeInfo.ACTION_PASTE);
-    }
-
     /** Replaces the selection (or inserts at the cursor) without going through the clipboard. */
-    private static boolean setText(AccessibilityNodeInfo field, String text) {
+    private static boolean setText(AccessibilityNodeInfo field, String text, boolean placeholderAsText) {
         CharSequence current = field.isShowingHintText() ? null : field.getText();
         String old = current == null ? "" : current.toString();
+        // In those apps, a field without a real cursor is showing its placeholder, not text.
+        if (placeholderAsText && (field.getTextSelectionStart() < 0 || field.getTextSelectionEnd() < 0)) {
+            old = "";
+        }
         // Some apps (Telegram) expose the placeholder as the field's text without flagging it.
         CharSequence hint = field.getHintText();
         if (hint != null && old.contentEquals(hint)) old = "";
