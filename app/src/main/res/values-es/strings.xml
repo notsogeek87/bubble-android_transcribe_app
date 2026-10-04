@@ -105,4 +105,33 @@
 
     <string name="voice_help_title">Configuración de la entrada de voz</string>
     <string name="voice_help_body">Cómo usarlo\n• Abre cualquier app y toca el micrófono de un teclado/una app compatible. Aparece un panel pequeño, hablas, tocas para detener y el texto se inserta. (Activa «Parada automática tras silencio» en los ajustes para que se detenga solo.)\n\nQué teclados abren el panel de voz\n• Microsoft SwiftKey (no es de código abierto) y la búsqueda por voz de los sitios web abren el panel directamente.\n• AnySoftKeyboard es la vía de código abierto al panel: su tecla de micrófono lo abre mientras no haya ningún teclado de voz activado en tu sistema.\n\nOtros teclados de código abierto\n• HeliBoard, FlorisBoard, OpenBoard, Fossify Keyboard y Unexpected Keyboard no abren el panel: su tecla de micrófono cambia al teclado «Offline Voice Input». Actívalo una vez (mira «Alternativa: teclado de voz»), habla allí y vuelve con su tecla de cambio de teclado. FUTO Keyboard trae su propia entrada de voz.\n• Gboard solo usa la entrada de voz de Google y no puede usar esta app en absoluto.\n\nSi se abre la entrada de voz propia de SwiftKey\n• Ajustes → Entrada enriquecida → desactiva «Entrada de voz multimodal».\n• Luego toca de nuevo el micrófono y elige «Offline Voice Input».\n\nSi Android pregunta qué app usar\n• Elige «Offline Voice Input» y toca «Siempre».\n\nSi siempre se abre otra app\n• Abre Ajustes → Aplicaciones → esa app → «Abrir de forma predeterminada» → Borrar valores predeterminados, e inténtalo de nuevo.</string>
+
+    <!-- Mises à jour automatiques (lielugit-updater) -->
+    <string name="btn_check_update">Buscar actualizaciones</string>
+    <string name="setting_updates_desc">La app comprueba si hay una versión nueva cada vez que se abre.</string>
+    <string name="update_checking">Buscando…</string>
+    <string name="update_up_to_date">Tienes la última versión.</string>
+    <string name="update_available_title">Actualización disponible</string>
+    <string name="update_available_intro">La versión %1$s de Offline Voice Input está lista.</string>
+    <string name="update_step_download">Toca «Instalar»: la actualización se descarga.</string>
+    <string name="update_step_allow">Si Android pide permitir que la app instale aplicaciones, activa la opción y vuelve atrás.</string>
+    <string name="update_step_confirm">Confirma con «Actualizar» cuando Android lo ofrezca.</string>
+    <string name="update_data_kept">Tus datos y ajustes se conservan.</string>
+    <string name="update_install">Instalar</string>
+    <string name="update_later">Más tarde</string>
+    <string name="update_downloading_title">Descargando…</string>
+    <string name="update_downloaded_title">Actualización descargada</string>
+    <string name="update_downloaded_intro">Solo falta instalarla.</string>
+    <string name="update_step_install_confirm">Toca «Instalar» y confirma con «Actualizar».</string>
+    <string name="update_permission_intro">Android debe permitir primero que la app instale aplicaciones.</string>
+    <string name="update_permission_step_open">Toca «Instalar»: se abren los ajustes de Android.</string>
+    <string name="update_permission_step_enable">Activa «Permitir desde esta fuente» y vuelve atrás.</string>
+    <string name="update_permission_step_retry">Toca «Instalar» de nuevo y confirma.</string>
+    <string name="update_error_title">No se pudo actualizar</string>
+    <string name="update_error_network">Red no disponible. Inténtalo más tarde.</string>
+    <string name="update_error_rate_limit">Demasiadas solicitudes a GitHub. Inténtalo más tarde.</string>
+    <string name="update_error_no_release">No se encontró ninguna versión publicada.</string>
+    <string name="update_error_no_apk">No hay un APK compatible en la última versión.</string>
+    <string name="update_error_not_allowed">Permite que esta app instale aplicaciones desconocidas.</string>
+    <string name="update_error_generic">La actualización falló: %1$s</string>
 </resources>

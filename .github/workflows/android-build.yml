@@ -21,6 +21,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Devient versionCode (+ versionCodeOffset) et dernier segment du versionName (voir app/build.gradle.kts).
+      BUILD_NUMBER: ${{ github.run_number }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -74,13 +77,20 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      # versionCode/versionName uniques et strictement croissants (run_number) :
-      # chaque build s'installe par-dessus le précédent.
+      # versionCode/versionName uniques et strictement croissants (run_number) : chaque build s'installe
+      # par-dessus le précédent, et lielugit-updater compare le tag v<version> à la version installée.
+      # La version doit être celle compilée par app/build.gradle.kts : <appVersionBase>.<run_number>.
       - name: Déterminer la version
         id: version
         run: |
-          echo "code=$((1000 + ${{ github.run_number }}))" >> "$GITHUB_OUTPUT"
-          echo "name=0.1.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          base="$(grep -m1 '^appVersionBase=' gradle.properties | cut -d= -f2)"
+          offset="$(grep -m1 '^versionCodeOffset=' gradle.properties | cut -d= -f2)"
+          if [ -z "$base" ] || [ -z "$offset" ]; then
+            echo "::error::appVersionBase / versionCodeOffset introuvables dans gradle.properties"
+            exit 1
+          fi
+          echo "code=$((offset + ${{ github.run_number }}))" >> "$GITHUB_OUTPUT"
+          echo "name=$base.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
       # Signé avec la clé privée des secrets du dépôt (voir README, « Signature »).
       # Sans elle on échoue plutôt que de publier un APK signé avec une clé publique.
@@ -100,9 +110,7 @@ jobs:
           KEY_PASS: ${{ secrets.KEY_PASS }}
           STORE_PASS: ${{ secrets.STORE_PASS }}
         run: |
-          ./gradlew assembleRelease --no-daemon \
-            -PtranscribeVersionCode=${{ steps.version.outputs.code }} \
-            -PtranscribeVersionName=${{ steps.version.outputs.name }}
+          ./gradlew assembleRelease --no-daemon
 
       - name: Renommer l'APK avec sa version
         id: apk
@@ -113,6 +121,17 @@ jobs:
           mv "$SRC" "$DEST"
           echo "path=$DEST" >> "$GITHUB_OUTPUT"
 
+      # Preuve que l'APK porte bien la version attendue : sans cela Android (versionCode) ou
+      # lielugit-updater (versionName du tag) refuseraient la mise à jour en silence.
+      - name: Vérifier versionCode, versionName et applicationId de l'APK
+        run: |
+          AAPT2="$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)"
+          BADGING="$("$AAPT2" dump badging "${{ steps.apk.outputs.path }}")"
+          echo "$BADGING" | grep '^package:'
+          echo "$BADGING" | grep -q "name='dev.notune.transcribe'" || { echo "::error::applicationId inattendu"; exit 1; }
+          echo "$BADGING" | grep -q "versionCode='${{ steps.version.outputs.code }}'" || { echo "::error::versionCode attendu : ${{ steps.version.outputs.code }}"; exit 1; }
+          echo "$BADGING" | grep -q "versionName='${{ steps.version.outputs.name }}'" || { echo "::error::versionName attendu : ${{ steps.version.outputs.name }}"; exit 1; }
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
@@ -120,17 +139,54 @@ jobs:
           path: ${{ steps.apk.outputs.path }}
           if-no-files-found: error
 
-      # Release versionnée et permanente, seulement pour main.
+      # Release versionnée et permanente, seulement pour main. C'est la « dernière release » que
+      # lielugit-updater lit (/releases/latest) : tag v<version> toujours supérieur au précédent.
       - name: Publier la release GitHub (main)
         if: github.event_name != 'pull_request' && github.ref_name == 'main'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="v${{ steps.version.outputs.name }}"
+          APK="$(basename "${{ steps.apk.outputs.path }}")"
+          cat > release-notes.md <<NOTES
+          ## Comment installer ou mettre à jour Offline Voice Input
+
+          **L'app est déjà installée ?** Ouvrez-la : une fenêtre « Mise à jour disponible » vous guide
+          (touchez « Installer », autorisez l'app à installer des applications si Android le demande,
+          puis confirmez avec « Mettre à jour »). Le bouton « Rechercher une mise à jour » des Paramètres
+          fait la même vérification à la demande.
+
+          **Première installation, ou la fenêtre n'apparaît pas ?**
+          1. Téléchargez \`$APK\` ci-dessous.
+          2. Ouvrez le fichier téléchargé. Si Android bloque l'installation, touchez « Paramètres » et
+             activez « Autoriser depuis cette source », puis revenez en arrière.
+          3. Touchez « Installer » (ou « Mettre à jour »).
+
+          Vos données sont conservées lors d'une mise à jour.
+
+          ---
+
+          ## How to install or update
+
+          **Already installed?** Open the app: an "Update available" dialog walks you through it (tap
+          "Install", allow the app to install apps if Android asks, then confirm "Update"). The
+          "Check for updates" button in Settings does the same check on demand.
+
+          **First install, or no dialog?**
+          1. Download \`$APK\` below.
+          2. Open the downloaded file. If Android blocks it, tap "Settings", enable "Allow from this
+             source", then go back.
+          3. Tap "Install" (or "Update").
+
+          Your data is kept when updating.
+
+          ---
+          Run #${{ github.run_number }} (${{ github.sha }}).
+          NOTES
           gh release create "$TAG" \
             "${{ steps.apk.outputs.path }}" \
             --title "Offline Voice Input $TAG" \
-            --notes "Run #${{ github.run_number }} (${{ github.sha }})." \
+            --notes-file release-notes.md \
             --target "${{ github.sha }}"
 
       # Les artifacts d'Actions passent par Azure Blob Storage, souvent bloqué ;

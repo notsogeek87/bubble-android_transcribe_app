@@ -25,6 +25,8 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.slider.Slider;
 import com.google.android.material.snackbar.Snackbar;
 
+import dev.notune.transcribe.update.UpdateUi;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -204,6 +206,9 @@ public class MainActivity extends AppCompatActivity {
                 ThemePrefs.setMode(this, newMode);
             }
         });
+
+        // Mises à jour : vérification à chaque ouverture (ON_START) + bouton des Paramètres.
+        UpdateUi.attach(this, findViewById(R.id.btn_check_update));
 
         // Initial check
         updateVoiceInputStatus();

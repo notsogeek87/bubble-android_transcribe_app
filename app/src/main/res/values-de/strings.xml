@@ -105,4 +105,33 @@
 
     <string name="voice_help_title">Einrichtung der Spracheingabe</string>
     <string name="voice_help_body">So funktioniert es\n• Öffne eine beliebige App und tippe auf das Mikrofon einer unterstützten Tastatur/App. Ein kleines Panel erscheint, du sprichst, tippst zum Stoppen, und der Text wird eingefügt. (Aktiviere „Auto-Stopp bei Stille“ in den Einstellungen, damit es von selbst stoppt.)\n\nWelche Tastaturen öffnen das Sprach-Panel\n• Microsoft SwiftKey (nicht Open Source) und die Sprachsuche auf Websites öffnen das Panel direkt.\n• AnySoftKeyboard ist der Open-Source-Weg zum Panel: Seine Mikrofontaste öffnet es, solange auf deinem System keine Sprach-Tastatur aktiviert ist.\n\nAndere Open-Source-Tastaturen\n• HeliBoard, FlorisBoard, OpenBoard, Fossify Keyboard und Unexpected Keyboard öffnen das Panel nicht: Ihre Mikrofontaste wechselt stattdessen zur „Offline Voice Input“-Tastatur. Aktiviere sie einmal (siehe „Alternative: Sprach-Tastatur“), sprich dort und kehre über deren Tastaturwechsel-Taste zurück. FUTO Keyboard bringt eine eigene Spracheingabe mit.\n• Gboard nutzt nur Googles eigene Spracheingabe und kann diese App gar nicht verwenden.\n\nFalls SwiftKeys eigene Spracheingabe öffnet\n• Einstellungen → Rich-Eingabe → „Multimodale Spracheingabe“ deaktivieren.\n• Tippe dann erneut auf das Mikrofon und wähle „Offline Voice Input“.\n\nFalls Android fragt, welche App verwendet werden soll\n• Wähle „Offline Voice Input“ und tippe auf „Immer“.\n\nFalls immer eine andere App öffnet\n• Öffne Einstellungen → Apps → diese App → „Standardmäßig öffnen“ → Standardeinstellungen löschen, und versuche es erneut.</string>
+
+    <!-- Mises à jour automatiques (lielugit-updater) -->
+    <string name="btn_check_update">Nach Updates suchen</string>
+    <string name="setting_updates_desc">Die App prüft bei jedem Öffnen, ob eine neue Version vorliegt.</string>
+    <string name="update_checking">Suche…</string>
+    <string name="update_up_to_date">Sie nutzen die neueste Version.</string>
+    <string name="update_available_title">Update verfügbar</string>
+    <string name="update_available_intro">Version %1$s von Offline Voice Input ist bereit.</string>
+    <string name="update_step_download">Tippen Sie auf „Installieren“: Das Update wird heruntergeladen.</string>
+    <string name="update_step_allow">Fragt Android, ob die App Apps installieren darf, aktivieren Sie die Option und gehen Sie zurück.</string>
+    <string name="update_step_confirm">Bestätigen Sie mit „Aktualisieren“, sobald Android es anbietet.</string>
+    <string name="update_data_kept">Ihre Daten und Einstellungen bleiben erhalten.</string>
+    <string name="update_install">Installieren</string>
+    <string name="update_later">Später</string>
+    <string name="update_downloading_title">Wird heruntergeladen…</string>
+    <string name="update_downloaded_title">Update heruntergeladen</string>
+    <string name="update_downloaded_intro">Es muss nur noch installiert werden.</string>
+    <string name="update_step_install_confirm">Tippen Sie auf „Installieren“ und bestätigen Sie mit „Aktualisieren“.</string>
+    <string name="update_permission_intro">Android muss der App zuerst erlauben, Apps zu installieren.</string>
+    <string name="update_permission_step_open">Tippen Sie auf „Installieren“: Die Android-Einstellungen öffnen sich.</string>
+    <string name="update_permission_step_enable">Aktivieren Sie „Von dieser Quelle zulassen“ und gehen Sie zurück.</string>
+    <string name="update_permission_step_retry">Tippen Sie erneut auf „Installieren“ und bestätigen Sie.</string>
+    <string name="update_error_title">Update fehlgeschlagen</string>
+    <string name="update_error_network">Netzwerk nicht verfügbar. Versuchen Sie es später erneut.</string>
+    <string name="update_error_rate_limit">Zu viele Anfragen an GitHub. Versuchen Sie es später erneut.</string>
+    <string name="update_error_no_release">Keine veröffentlichte Version gefunden.</string>
+    <string name="update_error_no_apk">Kein kompatibles APK in der neuesten Version.</string>
+    <string name="update_error_not_allowed">Erlauben Sie dieser App, unbekannte Apps zu installieren.</string>
+    <string name="update_error_generic">Das Update ist fehlgeschlagen: %1$s</string>
 </resources>

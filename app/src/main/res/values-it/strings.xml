@@ -105,4 +105,33 @@
 
     <string name="voice_help_title">Configurazione dell\'immissione vocale</string>
     <string name="voice_help_body">Come usarlo\n• Apri qualsiasi app e tocca il microfono di una tastiera/app supportata. Appare un piccolo pannello, parli, tocchi per fermare e il testo viene inserito. (Attiva «Arresto automatico dopo il silenzio» nelle impostazioni per farlo fermare da solo.)\n\nQuali tastiere aprono il pannello vocale\n• Microsoft SwiftKey (non open source) e la ricerca vocale dei siti web aprono il pannello direttamente.\n• AnySoftKeyboard è la via open source al pannello: il suo tasto microfono lo apre finché nessuna tastiera vocale è attivata sul sistema.\n\nAltre tastiere open source\n• HeliBoard, FlorisBoard, OpenBoard, Fossify Keyboard e Unexpected Keyboard non aprono il pannello: il loro tasto microfono passa alla tastiera «Offline Voice Input». Attivala una volta (vedi «Alternativa: tastiera vocale»), parla lì e torna indietro con il suo tasto di cambio tastiera. FUTO Keyboard include una propria immissione vocale.\n• Gboard usa solo l\'immissione vocale di Google e non può usare affatto questa app.\n\nSe si apre l\'immissione vocale di SwiftKey\n• Impostazioni → Immissione avanzata → disattiva «Immissione vocale multimodale».\n• Poi tocca di nuovo il microfono e scegli «Offline Voice Input».\n\nSe Android chiede quale app usare\n• Scegli «Offline Voice Input» e tocca «Sempre».\n\nSe si apre sempre un\'altra app\n• Apri Impostazioni → App → quell\'app → «Apri per impostazione predefinita» → Cancella impostazioni predefinite, e riprova.</string>
+
+    <!-- Mises à jour automatiques (lielugit-updater) -->
+    <string name="btn_check_update">Cerca aggiornamenti</string>
+    <string name="setting_updates_desc">L\'app controlla se esiste una nuova versione a ogni apertura.</string>
+    <string name="update_checking">Ricerca…</string>
+    <string name="update_up_to_date">Hai l\'ultima versione.</string>
+    <string name="update_available_title">Aggiornamento disponibile</string>
+    <string name="update_available_intro">La versione %1$s di Offline Voice Input è pronta.</string>
+    <string name="update_step_download">Tocca «Installa»: l\'aggiornamento viene scaricato.</string>
+    <string name="update_step_allow">Se Android chiede di consentire all\'app di installare applicazioni, attiva l\'opzione e torna indietro.</string>
+    <string name="update_step_confirm">Conferma con «Aggiorna» quando Android lo propone.</string>
+    <string name="update_data_kept">I tuoi dati e le impostazioni vengono conservati.</string>
+    <string name="update_install">Installa</string>
+    <string name="update_later">Più tardi</string>
+    <string name="update_downloading_title">Download in corso…</string>
+    <string name="update_downloaded_title">Aggiornamento scaricato</string>
+    <string name="update_downloaded_intro">Resta solo da installarlo.</string>
+    <string name="update_step_install_confirm">Tocca «Installa», poi conferma con «Aggiorna».</string>
+    <string name="update_permission_intro">Android deve prima consentire all\'app di installare applicazioni.</string>
+    <string name="update_permission_step_open">Tocca «Installa»: si aprono le impostazioni di Android.</string>
+    <string name="update_permission_step_enable">Attiva «Consenti da questa fonte» e torna indietro.</string>
+    <string name="update_permission_step_retry">Tocca di nuovo «Installa» e conferma.</string>
+    <string name="update_error_title">Aggiornamento non riuscito</string>
+    <string name="update_error_network">Rete non disponibile. Riprova più tardi.</string>
+    <string name="update_error_rate_limit">Troppe richieste a GitHub. Riprova più tardi.</string>
+    <string name="update_error_no_release">Nessuna versione pubblicata trovata.</string>
+    <string name="update_error_no_apk">Nessun APK compatibile nell\'ultima versione.</string>
+    <string name="update_error_not_allowed">Consenti a questa app di installare app sconosciute.</string>
+    <string name="update_error_generic">Aggiornamento non riuscito: %1$s</string>
 </resources>

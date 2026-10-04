@@ -767,6 +767,23 @@
                                 android:text="@string/subtitle_lines_all"/>
                         </RadioGroup>
                     </LinearLayout>
+
+                    <!-- Mises à jour : vérification forcée à la demande (UpdateUi). -->
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="@string/setting_updates_desc"
+                        android:textAppearance="?attr/textAppearanceBodySmall"
+                        android:textColor="?attr/colorOnSurfaceVariant"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_check_update"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/btn_check_update"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

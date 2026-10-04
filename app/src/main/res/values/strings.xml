@@ -135,4 +135,33 @@
     <string name="floating_mic_stop_zone_label">Tap here to stop</string>
     <string name="floating_mic_reset">Reset positions</string>
     <string name="floating_mic_reset_done">Button positions reset</string>
+
+    <!-- Mises à jour automatiques (lielugit-updater) -->
+    <string name="btn_check_update">Check for updates</string>
+    <string name="setting_updates_desc">The app checks for a new version every time it opens.</string>
+    <string name="update_checking">Checking…</string>
+    <string name="update_up_to_date">You are on the latest version.</string>
+    <string name="update_available_title">Update available</string>
+    <string name="update_available_intro">Version %1$s of Offline Voice Input is ready.</string>
+    <string name="update_step_download">Tap “Install”: the update downloads.</string>
+    <string name="update_step_allow">If Android asks to allow this app to install apps, enable the option, then go back.</string>
+    <string name="update_step_confirm">Confirm with “Update” when Android offers it.</string>
+    <string name="update_data_kept">Your data and settings are kept.</string>
+    <string name="update_install">Install</string>
+    <string name="update_later">Later</string>
+    <string name="update_downloading_title">Downloading…</string>
+    <string name="update_downloaded_title">Update downloaded</string>
+    <string name="update_downloaded_intro">It only needs to be installed.</string>
+    <string name="update_step_install_confirm">Tap “Install”, then confirm with “Update”.</string>
+    <string name="update_permission_intro">Android must first allow this app to install apps.</string>
+    <string name="update_permission_step_open">Tap “Install”: the Android settings open.</string>
+    <string name="update_permission_step_enable">Enable “Allow from this source”, then go back.</string>
+    <string name="update_permission_step_retry">Tap “Install” again and confirm.</string>
+    <string name="update_error_title">Update failed</string>
+    <string name="update_error_network">Network unavailable. Try again later.</string>
+    <string name="update_error_rate_limit">Too many requests to GitHub. Try again later.</string>
+    <string name="update_error_no_release">No published version found.</string>
+    <string name="update_error_no_apk">No compatible APK in the latest release.</string>
+    <string name="update_error_not_allowed">Allow this app to install unknown apps.</string>
+    <string name="update_error_generic">The update failed: %1$s</string>
 </resources>

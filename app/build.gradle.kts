@@ -1,21 +1,33 @@
 import java.io.FileInputStream
 import java.security.MessageDigest
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("com.android.application")
+    id("org.jetbrains.kotlin.android")
 }
+
+// Numéro de build croissant : fourni par la CI (BUILD_NUMBER = github.run_number). Il devient le versionCode
+// (Android refuse d'installer par-dessus un versionCode non supérieur) et le dernier segment du versionName,
+// pour que lielugit-updater compare correctement le tag `v<version>` à la version installée.
+val buildNumber = (System.getenv("BUILD_NUMBER") ?: providers.gradleProperty("buildNumber").orNull)?.toIntOrNull() ?: 1
+val appVersionBase = providers.gradleProperty("appVersionBase").get()
+val versionCodeOffset = providers.gradleProperty("versionCodeOffset").get().toInt()
+val baseApplicationId = "dev.notune.transcribe"
 
 android {
     namespace = "dev.notune.transcribe"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "dev.notune.transcribe"
+        applicationId = baseApplicationId
         minSdk = 26
         targetSdk = 35
-        // La CI (android-build.yml) surcharge ces valeurs avec le numéro de run.
-        versionCode = (project.findProperty("transcribeVersionCode") as String?)?.toInt() ?: 19
-        versionName = (project.findProperty("transcribeVersionName") as String?) ?: "0.1.18"
+        versionCode = versionCodeOffset + buildNumber
+        versionName = "$appVersionBase.$buildNumber"
+        // Les mises à jour ne sont actives que pour l'applicationId d'origine : un flavor avec
+        // applicationIdSuffix (ex. .staging) ne peut pas être mis à jour depuis la release de production.
+        buildConfigField("String", "BASE_APPLICATION_ID", "\"$baseApplicationId\"")
         ndk {
             abiFilters += "arm64-v8a"
         }
@@ -45,6 +57,10 @@ android {
         }
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -69,6 +85,12 @@ android {
     assetPacks += listOf(":model_assets")
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_1_8)
+    }
+}
+
 // For APK builds (assemble/install), asset packs are ignored by AGP so we
 // must include the asset-pack assets as an extra source directory.  For
 // bundle builds the asset pack module handles delivery and we must NOT add
@@ -88,6 +110,11 @@ if (!isBundle) {
 dependencies {
     // Material Components (Material 3 / Material You). Pulls in AppCompat.
     implementation("com.google.android.material:material:1.12.0")
+
+    // Mises à jour automatiques depuis les releases GitHub (dépôt Maven vendoré dans libs/lielugit-maven).
+    implementation("com.lielu:lielugit-updater:1.0.0")
+    // Dispatchers.Main pour l'UI de mise à jour (la bibliothèque n'expose que coroutines-core).
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
     // Material/AppCompat transitively pull the legacy kotlin-stdlib-jdk7/jdk8:1.6.21
     // (via kotlinx-coroutines-android), whose classes were folded into

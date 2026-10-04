@@ -139,6 +139,15 @@ export STORE_PASS=yourpassword
 
 The built-in Parakeet TDT GGUF model (~485 MB) is automatically downloaded from HuggingFace during the first build via a Gradle task. The checksum is verified with SHA-256. No manual download is needed.
 
+## Mises à jour automatiques (ce fork)
+
+L'app se met à jour depuis les GitHub Releases de ce dépôt avec [lielugit-updater](https://github.com/notsogeek87/lielugit-updater) 1.0.0, sans jeton ni secret : la bibliothèque est vendorée dans `libs/lielugit-maven` (dépôt Maven public extrait du zip de la release, versionné dans git ; pour changer de version, remplacer le dossier par le nouveau zip et modifier la version dans `app/build.gradle.kts`).
+
+- À chaque ouverture de l'app (`ON_START`), une vérification forcée est faite ; si une version plus récente existe, une fenêtre guide l'utilisateur (Installer → autoriser les applications inconnues si Android le demande → confirmer « Mettre à jour »). Le bouton « Rechercher une mise à jour » des Paramètres lance la même vérification à la demande. Code : `app/src/main/java/dev/notune/transcribe/update/`.
+- Versionnage : la CI injecte son numéro de run (`BUILD_NUMBER`). `versionName = <appVersionBase>.<run>` (base dans `gradle.properties`, ex. `0.2.152`), `versionCode = versionCodeOffset + run` (le décalage de 1000 prolonge le schéma des anciens APK pour que le code continue de croître), tag de release `v<versionName>`. Même `applicationId` et même clé de signature pour tous les APK. Les mises à jour sont désactivées pour tout `applicationId` à suffixe (ex. `.staging`).
+- Seules les releases de `main` (non « pre-release ») sont proposées ; les APK de test des autres branches (`debug-<branche>`) ne le sont jamais.
+- **Première installation manuelle** : télécharger l'APK de la dernière release, l'ouvrir, autoriser la source si Android bloque, puis « Installer ». Les installations suivantes se mettent à jour depuis l'app. Les versions installées avant cette fonctionnalité (`0.1.x`) ne contiennent pas le module : les réinstaller une fois par-dessus (même clé de signature).
+
 ## Signature (CI de ce fork)
 
 Les APK publiés par la CI sont signés avec une clé privée stockée dans les secrets du dépôt, pour que personne d'autre ne puisse produire une « mise à jour » qu'Android accepterait. Sans ces secrets, le build échoue.

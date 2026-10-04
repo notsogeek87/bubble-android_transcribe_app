@@ -129,4 +129,33 @@
     <string name="floating_mic_stop_zone_label">Touchez ici pour arrêter</string>
     <string name="floating_mic_reset">Réinitialiser les positions</string>
     <string name="floating_mic_reset_done">Positions du bouton réinitialisées</string>
+
+    <!-- Mises à jour automatiques (lielugit-updater) -->
+    <string name="btn_check_update">Rechercher une mise à jour</string>
+    <string name="setting_updates_desc">L\'app vérifie si une nouvelle version existe à chaque ouverture.</string>
+    <string name="update_checking">Recherche…</string>
+    <string name="update_up_to_date">Vous utilisez la dernière version.</string>
+    <string name="update_available_title">Mise à jour disponible</string>
+    <string name="update_available_intro">La version %1$s d\'Offline Voice Input est prête.</string>
+    <string name="update_step_download">Touchez « Installer » : la mise à jour se télécharge.</string>
+    <string name="update_step_allow">Si Android demande d\'autoriser l\'app à installer des applications, activez l\'option, puis revenez en arrière.</string>
+    <string name="update_step_confirm">Confirmez avec « Mettre à jour » quand Android le propose.</string>
+    <string name="update_data_kept">Vos données et réglages sont conservés.</string>
+    <string name="update_install">Installer</string>
+    <string name="update_later">Plus tard</string>
+    <string name="update_downloading_title">Téléchargement…</string>
+    <string name="update_downloaded_title">Mise à jour téléchargée</string>
+    <string name="update_downloaded_intro">Il ne reste qu\'à l\'installer.</string>
+    <string name="update_step_install_confirm">Touchez « Installer », puis confirmez avec « Mettre à jour ».</string>
+    <string name="update_permission_intro">Android doit d\'abord autoriser l\'app à installer des applications.</string>
+    <string name="update_permission_step_open">Touchez « Installer » : les réglages Android s\'ouvrent.</string>
+    <string name="update_permission_step_enable">Activez « Autoriser depuis cette source », puis revenez en arrière.</string>
+    <string name="update_permission_step_retry">Touchez de nouveau « Installer » et confirmez.</string>
+    <string name="update_error_title">Mise à jour impossible</string>
+    <string name="update_error_network">Réseau indisponible. Réessayez plus tard.</string>
+    <string name="update_error_rate_limit">Trop de requêtes vers GitHub. Réessayez plus tard.</string>
+    <string name="update_error_no_release">Aucune version publiée trouvée.</string>
+    <string name="update_error_no_apk">Aucun APK compatible dans la dernière version.</string>
+    <string name="update_error_not_allowed">Autorisez l\'installation d\'applications inconnues pour cette app.</string>
+    <string name="update_error_generic">La mise à jour a échoué : %1$s</string>
 </resources>
