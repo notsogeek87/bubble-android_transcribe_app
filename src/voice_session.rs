@@ -10,9 +10,12 @@ use crate::engine;
 
 // --- Optional auto-stop endpointing (same level heuristics as recog_service) --
 /// Absolute smoothed level (0..1) that must be exceeded to count as speech.
-const MIN_SPEECH_LEVEL: f32 = 0.12;
+const MIN_SPEECH_LEVEL: f32 = 0.06;
 /// How far above the running noise floor a level must be to count as speech.
-const SPEECH_MARGIN: f32 = 0.08;
+const SPEECH_MARGIN: f32 = 0.04;
+/// The noise floor never climbs above this, so a loud room can't make speech
+/// look like silence.
+const MAX_NOISE_FLOOR: f32 = 0.08;
 /// Trailing silence after speech that triggers auto-stop.
 const AUTO_STOP_SILENCE_MS: u64 = 2000;
 /// If no speech is ever detected, auto-stop after this long.
@@ -163,9 +166,15 @@ pub fn start_recording(mut env: JNIEnv, state: &mut VoiceSessionState, auto_stop
                     *ep.last_voice.lock().unwrap() = Instant::now();
                     ep.speech_started.store(true, Ordering::SeqCst);
                 } else {
-                    // Slowly adapt the noise floor while no speech is present.
+                    // Track the noise floor: follow drops quickly, rise only very slowly
+                    // (pauses between words would otherwise ratchet it up to speech level
+                    // and end the session mid-sentence).
                     let mut nf = ep.noise_floor.lock().unwrap();
-                    *nf = *nf * 0.95 + level * 0.05;
+                    *nf = if level < *nf {
+                        *nf * 0.8 + level * 0.2
+                    } else {
+                        (*nf * 0.999 + level * 0.001).min(MAX_NOISE_FLOOR)
+                    };
                 }
             }
 
