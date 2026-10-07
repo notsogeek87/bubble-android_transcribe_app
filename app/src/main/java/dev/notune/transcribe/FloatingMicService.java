@@ -88,6 +88,20 @@ public class FloatingMicService extends Service {
         start(ctx, ACTION_REFRESH);
     }
 
+    /**
+     * Starts the bubble if the user left it enabled, from a context where the app may be in the
+     * background (after an update or boot). Android can refuse that; then it starts next time
+     * the app or the accessibility service comes up.
+     */
+    public static void startIfPossible(Context ctx) {
+        if (!FloatingMicPrefs.isEnabled(ctx)) return;
+        try {
+            start(ctx, ACTION_START);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Could not start the floating mic from the background", e);
+        }
+    }
+
     private static void start(Context ctx, String action) {
         Intent i = new Intent(ctx, FloatingMicService.class).setAction(action);
         if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(i); else ctx.startService(i);

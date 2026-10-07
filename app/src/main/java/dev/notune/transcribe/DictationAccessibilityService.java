@@ -245,6 +245,8 @@ public class DictationAccessibilityService extends AccessibilityService {
         super.onServiceConnected();
         instance = this;
         updateKeyboardVisibility();
+        // The bubble is gone after an update; the system binding us again is a reliable moment to bring it back.
+        FloatingMicService.startIfPossible(this);
     }
 
     @Override
