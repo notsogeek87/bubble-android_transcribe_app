@@ -67,7 +67,21 @@ public class DictationAccessibilityService extends AccessibilityService {
      * hint or flag to tell it apart from what was typed. Merging our text with the exposed
      * text would put the placeholder in front of the dictation.
      */
-    private static final String[] PLACEHOLDER_AS_TEXT_PACKAGES = {"com.whatsapp", "com.whatsapp.w4b"};
+    private static final String[] PLACEHOLDER_AS_TEXT_PACKAGES = {
+            "com.whatsapp", "com.whatsapp.w4b",
+            "org.telegram.messenger", "org.telegram.messenger.web", "org.telegram.messenger.beta",
+            "org.telegram.plus", "org.thunderdog.challegram", "nekox.messenger", "tw.nekomimi.nekogram"};
+
+    /** Placeholders those apps show in an empty message box (lower case). */
+    private static final String[] KNOWN_PLACEHOLDERS = {
+            "message", "write a message", "type a message", "écrire un message",
+            "écrivez un message", "saisissez un message", "message…", "message..."};
+
+    private static boolean isKnownPlaceholder(String s) {
+        String t = s.trim().toLowerCase(java.util.Locale.ROOT);
+        for (String p : KNOWN_PLACEHOLDERS) if (p.equals(t)) return true;
+        return false;
+    }
 
     private static boolean exposesPlaceholderAsText(AccessibilityNodeInfo field) {
         CharSequence pkg = field.getPackageName();
@@ -86,6 +100,8 @@ public class DictationAccessibilityService extends AccessibilityService {
         if (placeholderAsText && (field.getTextSelectionStart() < 0 || field.getTextSelectionEnd() < 0)) {
             old = "";
         }
+        // Whatever the cursor reports, these apps' box showing exactly their placeholder is empty.
+        if (placeholderAsText && isKnownPlaceholder(old)) old = "";
         // Some apps (Telegram) expose the placeholder as the field's text without flagging it.
         CharSequence hint = field.getHintText();
         if (hint != null && old.contentEquals(hint)) old = "";
