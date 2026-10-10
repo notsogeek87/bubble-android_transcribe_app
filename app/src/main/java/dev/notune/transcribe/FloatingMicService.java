@@ -58,6 +58,10 @@ public class FloatingMicService extends Service {
     private FrameLayout stopZone;
     private ImageView stopZoneIcon;
     private TextView stopZoneLabel;
+    // Some devices place an overlay window offset from the coordinates it was given (e.g. below
+    // the status bar). Measured once after the zone is laid out, then applied to every update.
+    private int zoneDx = 0;
+    private int zoneDy = 0;
     private LinearLayout stopZoneIdle;
     private LinearLayout stopZoneContent;
     // Big-zone mode: the small bubble opened the zone over the keyboard, which then
@@ -442,19 +446,30 @@ public class FloatingMicService extends Service {
                             | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                     PixelFormat.TRANSLUCENT);
             stopZoneParams.gravity = Gravity.TOP | Gravity.START;
+            zoneDx = 0;
+            zoneDy = 0;
             stopZoneParams.x = kb.left;
             stopZoneParams.y = kb.top;
             try {
                 windowManager.addView(stopZone, stopZoneParams);
                 bringBubbleToFront();
+                stopZone.getViewTreeObserver().addOnGlobalLayoutListener(
+                        new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
+                            @Override public void onGlobalLayout() {
+                                if (stopZone != null) {
+                                    stopZone.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                                }
+                                calibrateZone();
+                            }
+                        });
             } catch (Exception e) {
                 Log.e(TAG, "Failed to add the stop zone", e);
                 stopZone = null;
             }
-        } else if (stopZoneParams.x != kb.left || stopZoneParams.y != kb.top
+        } else if (stopZoneParams.x != kb.left - zoneDx || stopZoneParams.y != kb.top - zoneDy
                 || stopZoneParams.width != kb.width() || stopZoneParams.height != kb.height()) {
-            stopZoneParams.x = kb.left;
-            stopZoneParams.y = kb.top;
+            stopZoneParams.x = kb.left - zoneDx;
+            stopZoneParams.y = kb.top - zoneDy;
             stopZoneParams.width = kb.width();
             stopZoneParams.height = kb.height();
             try {
@@ -478,6 +493,25 @@ public class FloatingMicService extends Service {
         c.right = Math.min(sz[0], c.right);
         c.bottom = Math.min(sz[1], c.bottom);
         return c;
+    }
+
+    /** Moves the zone so it really sits on the keyboard, whatever offset the system applied. */
+    private void calibrateZone() {
+        if (stopZone == null) return;
+        Rect kb = clampToScreen(DictationAccessibilityService.getKeyboardBounds());
+        if (kb == null) return;
+        int[] loc = new int[2];
+        stopZone.getLocationOnScreen(loc);
+        int dx = loc[0] - kb.left;
+        int dy = loc[1] - kb.top;
+        if (dx == 0 && dy == 0) return;
+        zoneDx += dx;
+        zoneDy += dy;
+        stopZoneParams.x = kb.left - zoneDx;
+        stopZoneParams.y = kb.top - zoneDy;
+        try {
+            windowManager.updateViewLayout(stopZone, stopZoneParams);
+        } catch (Exception ignored) { }
     }
 
     private void closeZoneMode() {
