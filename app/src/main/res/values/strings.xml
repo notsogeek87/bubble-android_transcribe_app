@@ -167,4 +167,19 @@
     <string name="floating_mic_zone_start">Tap here to speak</string>
     <string name="floating_mic_zone_processing">Transcribing…</string>
     <string name="floating_mic_zone_close">Close</string>
+    <string name="quick_title">Quick start: floating mic bubble</string>
+    <string name="quick_intro">A small mic bubble floats over all your apps. Tap it, speak, tap again: your words are typed into the text field you are in. Follow these 4 steps once.</string>
+    <string name="quick_step_mic">1. Microphone access</string>
+    <string name="quick_step_overlay">2. Display over other apps (so the bubble can appear)</string>
+    <string name="quick_step_a11y">3. Text insertion: enable “Floating mic button” (Offline Voice Input) in Accessibility (so the text is typed for you)</string>
+    <string name="quick_step_bubble">4. Bubble switched on</string>
+    <string name="quick_next_mic">Step 1: allow the microphone</string>
+    <string name="quick_next_overlay">Step 2: allow display over other apps</string>
+    <string name="quick_next_a11y">Step 3: open Accessibility settings</string>
+    <string name="quick_next_bubble">Step 4: show the bubble</string>
+    <string name="quick_next_done">Bubble is on</string>
+    <string name="quick_howto">How to use it: open any app and tap a text field. Tap the bubble and speak. Tap it again to stop: the text appears in the field. Drag the bubble to move it. Adjust its size, opacity and position in the card below.</string>
+    <string name="quick_a11y_help">In Accessibility, open “Installed apps” (or “Downloaded apps”), choose “Offline Voice Input”, then “Floating mic button”, and switch it on.</string>
+    <string name="other_modes_show">Show other modes and settings</string>
+    <string name="other_modes_hide">Hide other modes and settings</string>
 </resources>

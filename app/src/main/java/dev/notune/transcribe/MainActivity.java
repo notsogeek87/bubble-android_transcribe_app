@@ -53,6 +53,9 @@ public class MainActivity extends AppCompatActivity {
     private Button startSubsButton;
     private Button benchButton;
     private TextView benchResultText;
+    private CompoundButton floatingSwitch;
+    private Button quickNextButton;
+    private final ImageView[] quickStepIcons = new ImageView[4];
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,12 +85,29 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        CompoundButton floatingSwitch = findViewById(R.id.switch_floating_mic);
+        quickStepIcons[0] = findViewById(R.id.img_step_mic);
+        quickStepIcons[1] = findViewById(R.id.img_step_overlay);
+        quickStepIcons[2] = findViewById(R.id.img_step_a11y);
+        quickStepIcons[3] = findViewById(R.id.img_step_bubble);
+        quickNextButton = findViewById(R.id.btn_quick_next);
+        quickNextButton.setOnClickListener(v -> onQuickNext());
+
+        // Only the floating bubble is promoted; the other modes are folded away.
+        View otherModes = findViewById(R.id.container_other_modes);
+        Button otherModesButton = findViewById(R.id.btn_other_modes);
+        otherModesButton.setOnClickListener(v -> {
+            boolean show = otherModes.getVisibility() != View.VISIBLE;
+            otherModes.setVisibility(show ? View.VISIBLE : View.GONE);
+            otherModesButton.setText(show ? R.string.other_modes_hide : R.string.other_modes_show);
+        });
+
+        floatingSwitch = findViewById(R.id.switch_floating_mic);
         floatingSwitch.setChecked(FloatingMicPrefs.isEnabled(this));
         floatingSwitch.setOnCheckedChangeListener((btn, on) -> {
             if (!on) {
                 FloatingMicPrefs.setEnabled(this, false);
                 FloatingMicService.stop(this);
+                updateQuickStart();
                 return;
             }
             if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
@@ -104,6 +124,7 @@ public class MainActivity extends AppCompatActivity {
                 FloatingMicPrefs.setEnabled(this, true);
                 FloatingMicService.start(this);
             }
+            updateQuickStart();
         });
         Slider sizeSlider = findViewById(R.id.slider_floating_size);
         sizeSlider.setValue(FloatingMicPrefs.getSizeDp(this));
@@ -212,6 +233,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Initial check
         updateVoiceInputStatus();
+        updateQuickStart();
 
         // Start init
         initNative(this);
@@ -222,6 +244,61 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         // Re-check on return from the keyboard chooser, settings, or a test run.
         updateVoiceInputStatus();
+        updateQuickStart();
+    }
+
+    private boolean hasMic() {
+        return checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean isDictationA11yEnabled() {
+        String enabled = Settings.Secure.getString(getContentResolver(),
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+        if (enabled == null) return false;
+        String service = getPackageName() + "/" + DictationAccessibilityService.class.getName();
+        String shortName = getPackageName() + "/." + DictationAccessibilityService.class.getSimpleName();
+        for (String s : enabled.split(":")) {
+            if (s.equalsIgnoreCase(service) || s.equalsIgnoreCase(shortName)) return true;
+        }
+        return false;
+    }
+
+    /** Ticks the quick-start steps and points the main button at the next missing one. */
+    private void updateQuickStart() {
+        boolean[] done = {
+                hasMic(),
+                Settings.canDrawOverlays(this),
+                isDictationA11yEnabled(),
+                FloatingMicPrefs.isEnabled(this),
+        };
+        int tint = ContextCompat.getColor(this, R.color.status_ok);
+        int errTint = themeColor(com.google.android.material.R.attr.colorError);
+        int next = -1;
+        for (int i = 0; i < done.length; i++) {
+            quickStepIcons[i].setImageResource(done[i] ? R.drawable.ic_check_circle : R.drawable.ic_error);
+            ImageViewCompat.setImageTintList(quickStepIcons[i],
+                    ColorStateList.valueOf(done[i] ? tint : errTint));
+            if (!done[i] && next < 0) next = i;
+        }
+        int[] labels = {R.string.quick_next_mic, R.string.quick_next_overlay,
+                R.string.quick_next_a11y, R.string.quick_next_bubble};
+        quickNextButton.setEnabled(next >= 0);
+        quickNextButton.setText(next >= 0 ? labels[next] : R.string.quick_next_done);
+    }
+
+    private void onQuickNext() {
+        if (!hasMic()) {
+            checkAndRequestPermissions();
+        } else if (!Settings.canDrawOverlays(this)) {
+            startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    android.net.Uri.parse("package:" + getPackageName())));
+        } else if (!isDictationA11yEnabled()) {
+            snackbar(getString(R.string.quick_a11y_help));
+            startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+        } else if (!FloatingMicPrefs.isEnabled(this)) {
+            floatingSwitch.setChecked(true);
+        }
     }
 
     /**
@@ -381,6 +458,7 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         if (requestCode == PERM_REQ_CODE) {
             updateVoiceInputStatus();
+            updateQuickStart();
         }
     }
 

@@ -43,9 +43,8 @@
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="16dp"/>
 
-            <!-- 1. Voice input readiness card (primary flow: keyboard mic / web voice
-                 search fire RECOGNIZE_SPEECH, which RecognizeActivity handles). The
-                 status text/icon and button visibility are set in MainActivity. -->
+            <!-- Quick start: guided setup for the floating mic bubble (the main mode).
+                 Step icons and the "next step" button are driven by MainActivity. -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -57,82 +56,20 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginBottom="8dp">
-
-                        <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:src="@drawable/ic_mic"
-                            android:contentDescription="@string/section_voice"
-                            app:tint="?attr/colorPrimary"
-                            android:layout_marginEnd="12dp"/>
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/section_voice"
-                            android:textAppearance="?attr/textAppearanceTitleLarge"/>
-
-                        <ImageView
-                            android:id="@+id/img_voice_status"
-                            android:layout_width="28dp"
-                            android:layout_height="28dp"
-                            android:src="@drawable/ic_check_circle"
-                            android:contentDescription="@string/section_voice"
-                            app:tint="@color/status_ok"/>
-                    </LinearLayout>
-
                     <TextView
-                        android:id="@+id/text_voice_status"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/voice_status_ready"
-                        android:textAppearance="?attr/textAppearanceBodyMedium"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:layout_marginBottom="16dp"/>
-
-                    <!-- Shown only when RECORD_AUDIO is missing. -->
-                    <Button
-                        android:id="@+id/btn_voice_grant"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/btn_voice_grant"
-                        android:visibility="gone"
+                        android:text="@string/quick_title"
+                        android:textAppearance="?attr/textAppearanceTitleLarge"
                         android:layout_marginBottom="8dp"/>
 
-                    <!-- One-tap self-test: fires the real RECOGNIZE_SPEECH intent. -->
-                    <Button
-                        android:id="@+id/btn_voice_try"
+                    <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/btn_voice_try"/>
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_voice_help"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/btn_voice_help"/>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- 2. Subtitles Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:contentPadding="16dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                        android:text="@string/quick_intro"
+                        android:textAppearance="?attr/textAppearanceBodyMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:layout_marginBottom="16dp"/>
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -142,41 +79,104 @@
                         android:layout_marginBottom="8dp">
 
                         <ImageView
+                            android:id="@+id/img_step_mic"
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@drawable/ic_subtitles"
-                            android:contentDescription="@string/section_subs"
-                            app:tint="?attr/colorPrimary"
+                            android:src="@drawable/ic_error"
+                            android:contentDescription="@string/quick_step_mic"
                             android:layout_marginEnd="12dp"/>
 
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/section_subs"
-                            android:textAppearance="?attr/textAppearanceTitleLarge"/>
+                            android:text="@string/quick_step_mic"
+                            android:textAppearance="?attr/textAppearanceBodyMedium"/>
                     </LinearLayout>
 
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <ImageView
+                            android:id="@+id/img_step_overlay"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_error"
+                            android:contentDescription="@string/quick_step_overlay"
+                            android:layout_marginEnd="12dp"/>
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/quick_step_overlay"
+                            android:textAppearance="?attr/textAppearanceBodyMedium"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <ImageView
+                            android:id="@+id/img_step_a11y"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_error"
+                            android:contentDescription="@string/quick_step_a11y"
+                            android:layout_marginEnd="12dp"/>
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/quick_step_a11y"
+                            android:textAppearance="?attr/textAppearanceBodyMedium"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <ImageView
+                            android:id="@+id/img_step_bubble"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_error"
+                            android:contentDescription="@string/quick_step_bubble"
+                            android:layout_marginEnd="12dp"/>
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/quick_step_bubble"
+                            android:textAppearance="?attr/textAppearanceBodyMedium"/>
+                    </LinearLayout>
+
+                    <Button
+                        android:id="@+id/btn_quick_next"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/quick_next_mic"/>
+
                     <TextView
+                        android:id="@+id/text_quick_howto"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/desc_subs"
+                        android:text="@string/quick_howto"
                         android:textAppearance="?attr/textAppearanceBodyMedium"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:layout_marginBottom="16dp"/>
-
-                    <Button
-                        android:id="@+id/btn_subs_start"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/btn_subs_start"/>
-
-                    <Button
-                        android:id="@+id/btn_subs_advanced"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/btn_subs_advanced"/>
+                        android:layout_marginTop="16dp"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -379,6 +379,159 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/btn_models"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Everything that is not the bubble mode stays folded away. -->
+            <Button
+                android:id="@+id/btn_other_modes"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="@string/other_modes_show"/>
+
+            <LinearLayout
+                android:id="@+id/container_other_modes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+            <!-- 1. Voice input readiness card (primary flow: keyboard mic / web voice
+                 search fire RECOGNIZE_SPEECH, which RecognizeActivity handles). The
+                 status text/icon and button visibility are set in MainActivity. -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:contentPadding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_mic"
+                            android:contentDescription="@string/section_voice"
+                            app:tint="?attr/colorPrimary"
+                            android:layout_marginEnd="12dp"/>
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/section_voice"
+                            android:textAppearance="?attr/textAppearanceTitleLarge"/>
+
+                        <ImageView
+                            android:id="@+id/img_voice_status"
+                            android:layout_width="28dp"
+                            android:layout_height="28dp"
+                            android:src="@drawable/ic_check_circle"
+                            android:contentDescription="@string/section_voice"
+                            app:tint="@color/status_ok"/>
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/text_voice_status"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/voice_status_ready"
+                        android:textAppearance="?attr/textAppearanceBodyMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:layout_marginBottom="16dp"/>
+
+                    <!-- Shown only when RECORD_AUDIO is missing. -->
+                    <Button
+                        android:id="@+id/btn_voice_grant"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/btn_voice_grant"
+                        android:visibility="gone"
+                        android:layout_marginBottom="8dp"/>
+
+                    <!-- One-tap self-test: fires the real RECOGNIZE_SPEECH intent. -->
+                    <Button
+                        android:id="@+id/btn_voice_try"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/btn_voice_try"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_voice_help"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/btn_voice_help"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- 2. Subtitles Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:contentPadding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_subtitles"
+                            android:contentDescription="@string/section_subs"
+                            app:tint="?attr/colorPrimary"
+                            android:layout_marginEnd="12dp"/>
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/section_subs"
+                            android:textAppearance="?attr/textAppearanceTitleLarge"/>
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/desc_subs"
+                        android:textAppearance="?attr/textAppearanceBodyMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:layout_marginBottom="16dp"/>
+
+                    <Button
+                        android:id="@+id/btn_subs_start"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/btn_subs_start"/>
+
+                    <Button
+                        android:id="@+id/btn_subs_advanced"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/btn_subs_advanced"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -847,6 +1000,7 @@
                         android:text="@string/btn_benchmark"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
 
         </LinearLayout>
     </ScrollView>

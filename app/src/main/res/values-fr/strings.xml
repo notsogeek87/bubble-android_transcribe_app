@@ -161,4 +161,19 @@
     <string name="floating_mic_zone_start">Touchez ici pour parler</string>
     <string name="floating_mic_zone_processing">Transcription…</string>
     <string name="floating_mic_zone_close">Fermer</string>
+    <string name="quick_title">Démarrage rapide : la bulle micro</string>
+    <string name="quick_intro">Une petite bulle micro flotte au-dessus de toutes vos applis. Touchez-la, parlez, touchez-la à nouveau : votre texte s\'écrit dans le champ où vous êtes. Suivez ces 4 étapes une seule fois.</string>
+    <string name="quick_step_mic">1. Accès au microphone</string>
+    <string name="quick_step_overlay">2. Affichage par-dessus les autres applis (pour que la bulle apparaisse)</string>
+    <string name="quick_step_a11y">3. Insertion du texte : activez « Offline Voice Input » (bouton micro flottant) dans Accessibilité (pour que le texte soit tapé à votre place)</string>
+    <string name="quick_step_bubble">4. Bulle activée</string>
+    <string name="quick_next_mic">Étape 1 : autoriser le microphone</string>
+    <string name="quick_next_overlay">Étape 2 : autoriser l\'affichage par-dessus les autres applis</string>
+    <string name="quick_next_a11y">Étape 3 : ouvrir les réglages d\'Accessibilité</string>
+    <string name="quick_next_bubble">Étape 4 : afficher la bulle</string>
+    <string name="quick_next_done">La bulle est activée</string>
+    <string name="quick_howto">Comment l\'utiliser : ouvrez n\'importe quelle appli et touchez un champ de texte. Touchez la bulle et parlez. Touchez-la à nouveau pour arrêter : le texte apparaît dans le champ. Faites glisser la bulle pour la déplacer. Réglez sa taille, son opacité et sa position dans la carte ci-dessous.</string>
+    <string name="quick_a11y_help">Dans Accessibilité, ouvrez « Applications installées » (ou « Applications téléchargées »), choisissez « Offline Voice Input », puis le bouton micro flottant, et activez-le.</string>
+    <string name="other_modes_show">Afficher les autres modes et réglages</string>
+    <string name="other_modes_hide">Masquer les autres modes et réglages</string>
 </resources>
