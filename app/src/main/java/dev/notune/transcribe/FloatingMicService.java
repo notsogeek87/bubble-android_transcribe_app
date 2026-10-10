@@ -58,6 +58,8 @@ public class FloatingMicService extends Service {
     private FrameLayout stopZone;
     private ImageView stopZoneIcon;
     private TextView stopZoneLabel;
+    private LinearLayout stopZoneIdle;
+    private LinearLayout stopZoneContent;
     // Big-zone mode: the small bubble opened the zone over the keyboard, which then
     // starts/stops the recording until the bubble is tapped again.
     private boolean zoneMode = false;
@@ -328,9 +330,8 @@ public class FloatingMicService extends Service {
         if (isProcessing) return;
         if (zoneMode) {
             // Second tap on the bubble: leave big-zone mode (stopping a running recording).
-            zoneMode = false;
             if (isRecording) finishRecording();
-            removeStopZone();
+            closeZoneMode();
             return;
         }
         if (!isRecording) {
@@ -377,7 +378,7 @@ public class FloatingMicService extends Service {
      */
     @SuppressLint("ClickableViewAccessibility")
     private void updateStopZone() {
-        Rect kb = DictationAccessibilityService.getKeyboardBounds();
+        Rect kb = clampToScreen(DictationAccessibilityService.getKeyboardBounds());
         boolean show = zoneMode
                 && FloatingMicPrefs.isStopZoneEnabled(this)
                 && DictationAccessibilityService.isRunning()
@@ -418,6 +419,21 @@ public class FloatingMicService extends Service {
                 if (isRecording) finishRecording(); else beginRecording();
             });
 
+            // Idle: split in two. Left (green) starts a new dictation, right (blue) closes
+            // the big zone, so the keyboard is usable again.
+            stopZoneIdle = new LinearLayout(this);
+            stopZoneIdle.setOrientation(LinearLayout.HORIZONTAL);
+            stopZoneIdle.addView(idlePanel(0x3352C77C, R.drawable.ic_mic,
+                    R.string.floating_mic_zone_start, this::beginRecording),
+                    new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f));
+            stopZoneIdle.addView(idlePanel(0x334A90FF, R.drawable.ic_close,
+                    R.string.floating_mic_zone_close, this::closeZoneMode),
+                    new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f));
+            stopZone.addView(stopZoneIdle, new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT));
+            stopZoneContent = content;
+
             // NOT_FOCUSABLE keeps the input focus in the app, so the text can still be typed in.
             stopZoneParams = new WindowManager.LayoutParams(
                     kb.width(), kb.height(),
@@ -448,9 +464,57 @@ public class FloatingMicService extends Service {
         applyZoneState();
     }
 
+    /**
+     * The keyboard's reported rectangle can reach past the visible screen (under the
+     * navigation bar); the zone is clamped to what is on screen so its content is
+     * centred on the part the user actually sees.
+     */
+    private Rect clampToScreen(Rect r) {
+        if (r == null) return null;
+        int[] sz = screenSize();
+        Rect c = new Rect(r);
+        c.left = Math.max(0, c.left);
+        c.top = Math.max(0, c.top);
+        c.right = Math.min(sz[0], c.right);
+        c.bottom = Math.min(sz[1], c.bottom);
+        return c;
+    }
+
+    private void closeZoneMode() {
+        zoneMode = false;
+        removeStopZone();
+    }
+
+    /** One half of the idle zone: tinted background, icon and label, tappable. */
+    private LinearLayout idlePanel(int bg, int iconRes, int labelRes, Runnable onTap) {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setGravity(Gravity.CENTER);
+        panel.setBackgroundColor(bg);
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(iconRes);
+        icon.setColorFilter(0xFFFFFFFF);
+        int size = (int) (56 * density);
+        panel.addView(icon, new LinearLayout.LayoutParams(size, size));
+        TextView label = new TextView(this);
+        label.setText(labelRes);
+        label.setTextColor(0xFFFFFFFF);
+        label.setTextSize(16);
+        label.setGravity(Gravity.CENTER);
+        label.setShadowLayer(4 * density, 0, 0, 0xFF000000);
+        panel.addView(label, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        panel.setOnClickListener(v -> onTap.run());
+        return panel;
+    }
+
     /** Colour and label of the big zone follow the state: idle, recording, transcribing. */
     private void applyZoneState() {
         if (stopZone == null) return;
+        boolean idle = !isRecording && !isProcessing;
+        stopZoneIdle.setVisibility(idle ? View.VISIBLE : View.GONE);
+        stopZoneContent.setVisibility(idle ? View.GONE : View.VISIBLE);
         if (isRecording) {
             stopZone.setBackgroundColor(0x33FF5252);
             stopZoneLabel.setText(R.string.floating_mic_stop_zone_label);
@@ -460,10 +524,7 @@ public class FloatingMicService extends Service {
             stopZoneIcon.setScaleX(1f);
             stopZoneIcon.setScaleY(1f);
         } else {
-            stopZone.setBackgroundColor(0x3352C77C);
-            stopZoneLabel.setText(R.string.floating_mic_zone_start);
-            stopZoneIcon.setScaleX(1f);
-            stopZoneIcon.setScaleY(1f);
+            stopZone.setBackgroundColor(0x00000000);
         }
     }
 
@@ -490,6 +551,8 @@ public class FloatingMicService extends Service {
         stopZone = null;
         stopZoneIcon = null;
         stopZoneLabel = null;
+        stopZoneIdle = null;
+        stopZoneContent = null;
     }
 
     private void setBubbleState(boolean recording) {

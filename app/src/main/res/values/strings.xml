@@ -166,4 +166,5 @@
     <string name="update_error_generic">The update failed: %1$s</string>
     <string name="floating_mic_zone_start">Tap here to speak</string>
     <string name="floating_mic_zone_processing">Transcribing…</string>
+    <string name="floating_mic_zone_close">Close</string>
 </resources>

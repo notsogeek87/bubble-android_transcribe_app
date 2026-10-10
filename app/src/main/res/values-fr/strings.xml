@@ -160,4 +160,5 @@
     <string name="update_error_generic">La mise à jour a échoué : %1$s</string>
     <string name="floating_mic_zone_start">Touchez ici pour parler</string>
     <string name="floating_mic_zone_processing">Transcription…</string>
+    <string name="floating_mic_zone_close">Fermer</string>
 </resources>
