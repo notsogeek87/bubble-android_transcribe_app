@@ -31,10 +31,11 @@ pub unsafe extern "system" fn Java_dev_notune_transcribe_FloatingMicService_star
     env: JNIEnv,
     _class: JClass,
     auto_stop: jni::sys::jboolean,
+    live: jni::sys::jboolean,
 ) {
     let mut guard = FLOAT_STATE.lock().unwrap();
     if let Some(state) = guard.as_mut() {
-        voice_session::start_recording(env, state, auto_stop != 0, false);
+        voice_session::start_recording(env, state, auto_stop != 0, live != 0);
     }
 }
 

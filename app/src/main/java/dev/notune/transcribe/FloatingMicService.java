@@ -62,6 +62,8 @@ public class FloatingMicService extends Service {
     private Handler mainHandler;
     private boolean nativeReady = false;
     private boolean isRecording = false;
+    // Whether the current recording writes into the field while speaking.
+    private boolean liveTyping = false;
     private final AudioFocusPauser audioPauser = new AudioFocusPauser();
     private boolean isProcessing = false;
     private float opacity = 1f;
@@ -318,7 +320,9 @@ public class FloatingMicService extends Service {
             isRecording = true;
             setBubbleState(true);
             if (AudioFocusPauser.isEnabled(this)) audioPauser.request(this);
-            startRecording(isAutoStopEnabled());
+            DictationAccessibilityService.resetLive();
+            liveTyping = DictationAccessibilityService.isRunning() && isLiveTypingEnabled();
+            startRecording(isAutoStopEnabled(), liveTyping);
             updateStopZone();
         } else {
             finishRecording();
@@ -461,10 +465,28 @@ public class FloatingMicService extends Service {
         });
     }
 
+    // Called from Rust while recording (live typing): finished sentences are
+    // kept, the sentence in progress is rewritten on every update.
+    public void onPartialText(String text, boolean isFinal) {
+        mainHandler.post(() -> {
+            if (!isRecording || !liveTyping) return;
+            String t = isFinal && !text.isEmpty() ? text + " " : text;
+            DictationAccessibilityService.insertLive(this, t, isFinal);
+        });
+    }
+
     public void onTextTranscribed(String text) {
         mainHandler.post(() -> {
             isProcessing = false;
             if (bubble != null) { setBubbleState(false); updateVisibility(); }
+            if (liveTyping) {
+                liveTyping = false;
+                // Replace the last partial with the final remainder (or drop it).
+                String t = text == null ? "" : text.trim();
+                DictationAccessibilityService.insertLive(this, t.isEmpty() ? "" : t + " ", true);
+                DictationAccessibilityService.resetLive();
+                return;
+            }
             if (text == null || text.trim().isEmpty()) return;
             if (!DictationAccessibilityService.insert(this, text)) {
                 Toast.makeText(this, R.string.floating_mic_copied, Toast.LENGTH_LONG).show();
@@ -524,7 +546,12 @@ public class FloatingMicService extends Service {
 
     private native void initNative(FloatingMicService service);
     private native void cleanupNative();
-    private native void startRecording(boolean autoStop);
+    /** Live typing is default ON; the marker file is the opt-out. */
+    private boolean isLiveTypingEnabled() {
+        return !new java.io.File(getFilesDir(), "no_live_typing").exists();
+    }
+
+    private native void startRecording(boolean autoStop, boolean live);
     private native void stopRecording();
     private native void cancelRecording();
 }

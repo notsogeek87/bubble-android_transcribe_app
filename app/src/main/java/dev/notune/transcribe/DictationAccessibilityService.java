@@ -94,6 +94,13 @@ public class DictationAccessibilityService extends AccessibilityService {
 
     /** Replaces the selection (or inserts at the cursor) without going through the clipboard. */
     private static boolean setText(AccessibilityNodeInfo field, String text, boolean placeholderAsText) {
+        String old = currentText(field, placeholderAsText);
+        int[] sel = selection(field, old);
+        return replace(field, old, sel[0], sel[1], text);
+    }
+
+    /** The field's real text, with placeholders/hints treated as empty. */
+    private static String currentText(AccessibilityNodeInfo field, boolean placeholderAsText) {
         CharSequence current = field.isShowingHintText() ? null : field.getText();
         String old = current == null ? "" : current.toString();
         // In those apps, a field without a real cursor is showing its placeholder, not text.
@@ -107,13 +114,21 @@ public class DictationAccessibilityService extends AccessibilityService {
         if (hint != null && old.contentEquals(hint)) old = "";
         CharSequence desc = field.getContentDescription();
         if (desc != null && old.contentEquals(desc)) old = "";
+        return old;
+    }
+
+    /** {from, to} of the selection within {@code old}; the end of the text if unknown. */
+    private static int[] selection(AccessibilityNodeInfo field, String old) {
         int start = field.getTextSelectionStart();
         int end = field.getTextSelectionEnd();
         if (start < 0 || end < 0 || start > old.length() || end > old.length()) {
             start = end = old.length();
         }
-        int from = Math.min(start, end);
-        int to = Math.max(start, end);
+        return new int[] {Math.min(start, end), Math.max(start, end)};
+    }
+
+    /** Replaces old[from..to) with {@code text} and puts the caret after it. */
+    private static boolean replace(AccessibilityNodeInfo field, String old, int from, int to, String text) {
         String merged = old.substring(0, from) + text + old.substring(to);
 
         Bundle args = new Bundle();
@@ -125,6 +140,58 @@ public class DictationAccessibilityService extends AccessibilityService {
         sel.putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, caret);
         sel.putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, caret);
         field.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, sel);
+        return true;
+    }
+
+    // --- Live typing -----------------------------------------------------------
+    // While dictating, the sentence in progress is written into the field and
+    // replaced on every update. We remember where it sits and what we wrote; if
+    // the field no longer shows exactly that (the user typed or moved the
+    // cursor), the old text is treated as final and a new anchor is taken at
+    // the cursor, so we never overwrite anything the user wrote.
+    private static int liveStart = -1;
+    private static String liveText = "";
+
+    /** Forgets the live anchor; call when a dictation starts or is cancelled. */
+    public static void resetLive() {
+        liveStart = -1;
+        liveText = "";
+    }
+
+    /**
+     * Writes {@code text} as the live sentence (replacing the previous one);
+     * when {@code isFinal}, the sentence is kept and the next one starts after it.
+     */
+    public static boolean insertLive(Context ctx, String text, boolean isFinal) {
+        DictationAccessibilityService svc = instance;
+        if (svc == null) return false;
+        AccessibilityNodeInfo field = svc.findFocusedEditable();
+        if (field == null) return false;
+        String old = currentText(field, exposesPlaceholderAsText(field));
+
+        int from;
+        int to;
+        boolean anchored = liveStart >= 0
+                && liveStart + liveText.length() <= old.length()
+                && old.startsWith(liveText, liveStart);
+        if (anchored) {
+            from = liveStart;
+            to = liveStart + liveText.length();
+        } else {
+            // Nothing of ours to remove: never touch the user's selection.
+            if (text.isEmpty()) return true;
+            int[] sel = selection(field, old);
+            from = sel[0];
+            to = sel[1];
+        }
+        if (!replace(field, old, from, to, text)) return false;
+        if (isFinal) {
+            liveStart = from + text.length();
+            liveText = "";
+        } else {
+            liveStart = from;
+            liveText = text;
+        }
         return true;
     }
 
