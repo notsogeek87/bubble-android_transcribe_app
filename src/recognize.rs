@@ -34,7 +34,7 @@ pub unsafe extern "system" fn Java_dev_notune_transcribe_RecognizeActivity_start
 ) {
     let mut guard = RECOG_STATE.lock().unwrap();
     if let Some(state) = guard.as_mut() {
-        voice_session::start_recording(env, state, auto_stop != 0);
+        voice_session::start_recording(env, state, auto_stop != 0, false);
     }
 }
 

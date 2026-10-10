@@ -54,6 +54,8 @@ public class RustInputMethodService extends InputMethodService {
     private Handler mainHandler;
     private boolean isRecording = false;
     private boolean pendingSwitchBack = false;
+    // True while a live-typing partial is shown as composing text.
+    private boolean hasComposing = false;
     private String lastStatus = "Initializing...";
     // Key repeat settings
     private static final long REPEAT_INITIAL_DELAY = 400; // ms before repeat starts
@@ -251,7 +253,7 @@ public class RustInputMethodService extends InputMethodService {
                         audioPauser.request(this);
                         pauseAudioActive = true;
                     }
-                    startRecording();
+                    startRecording(isLiveTypingEnabled());
                     updateRecordButtonUI(true);
                 }
             });
@@ -290,7 +292,7 @@ public class RustInputMethodService extends InputMethodService {
                     audioPauser.request(this);
                     pauseAudioActive = true;
                 }
-                startRecording();
+                startRecording(isLiveTypingEnabled());
                 updateRecordButtonUI(true);
             }
         }
@@ -304,6 +306,9 @@ public class RustInputMethodService extends InputMethodService {
             if (isStopOnHideEnabled()) {
                 // Opt-in behavior: discard the recording when the keyboard hides.
                 try {
+                    InputConnection cic = getCurrentInputConnection();
+                    if (hasComposing && cic != null) cic.setComposingText("", 1);
+                    hasComposing = false;
                     cancelRecording();
                 } catch (Throwable t) {
                     Log.w(TAG, "cancelRecording failed, falling back to stopRecording", t);
@@ -397,7 +402,7 @@ public class RustInputMethodService extends InputMethodService {
     // Native methods
     private native void initNative(RustInputMethodService service);
     private native void cleanupNative();
-    private native void startRecording();
+    private native void startRecording(boolean live);
     private native void stopRecording();
     private native void cancelRecording();
 
@@ -453,9 +458,46 @@ public class RustInputMethodService extends InputMethodService {
         }
     }
 
+    // Called from Rust while recording (live typing): a finished sentence
+    // (isFinal) is committed, the sentence in progress is shown as composing
+    // text that the next update replaces.
+    public void onPartialText(String text, boolean isFinal) {
+        mainHandler.post(() -> {
+            if (!isRecording) return;
+            InputConnection ic = getCurrentInputConnection();
+            if (!inputActive || ic == null) {
+                // Background recording with no focused field: keep finished
+                // sentences so they are committed once a field is focused.
+                if (isFinal && text != null && !text.isEmpty()) {
+                    pendingCommitText = (pendingCommitText == null ? "" : pendingCommitText)
+                            + text + " ";
+                }
+                return;
+            }
+            if (isFinal) {
+                if (text == null || text.isEmpty()) {
+                    if (hasComposing) ic.setComposingText("", 1);
+                } else {
+                    ic.commitText(text + " ", 1);
+                }
+                hasComposing = false;
+            } else {
+                ic.setComposingText(text, 1);
+                hasComposing = true;
+            }
+        });
+    }
+
     // Called from Rust
     public void onTextTranscribed(String text) {
         mainHandler.post(() -> {
+            if (hasComposing) {
+                // Live typing: drop the last partial; the final text below
+                // (or nothing) takes its place.
+                InputConnection cic = getCurrentInputConnection();
+                if (cic != null) cic.setComposingText("", 1);
+                hasComposing = false;
+            }
             if (text == null || text.trim().isEmpty()) {
                 // Nothing recognized — don't insert a stray space.
                 updateRecordButtonUI(false);
@@ -479,7 +521,7 @@ public class RustInputMethodService extends InputMethodService {
                 // a web field in Firefox/Gemini dropped focus while we processed
                 // audio). Committing now would be silently dropped, so defer the
                 // text until a field is focused again instead of losing it.
-                pendingCommitText = committed;
+                pendingCommitText = (pendingCommitText == null ? "" : pendingCommitText) + committed;
             }
             if (pauseAudioActive) {
                 audioPauser.abandon(this);
@@ -531,6 +573,11 @@ public class RustInputMethodService extends InputMethodService {
 
     private boolean isPauseAudioEnabled() {
         return new File(getFilesDir(), "pause_audio").exists();
+    }
+
+    /** Live typing is default ON; the marker file is the opt-out. */
+    private boolean isLiveTypingEnabled() {
+        return !new File(getFilesDir(), "no_live_typing").exists();
     }
 
     /** "Record in background" is default ON; the marker file is the opt-out. */

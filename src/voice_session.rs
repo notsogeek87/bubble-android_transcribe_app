@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -33,6 +33,25 @@ struct Endpointing {
     speech_started: AtomicBool,
 }
 
+// --- Live (streaming) transcription while recording --------------------------
+/// How often the live thread inspects the recording.
+const LIVE_POLL_MS: u64 = 100;
+/// Minimum new audio between two partial updates (~0.7 s).
+const LIVE_TICK_SAMPLES: usize = 11_200;
+/// Trailing silence that finalizes the current segment (~0.7 s).
+const LIVE_FINALIZE_SILENCE: usize = 11_200;
+/// Hard cap on one segment; partials re-transcribe the whole segment, so this
+/// also bounds their cost.
+const LIVE_MAX_SEGMENT: usize = 10 * 16_000;
+/// Segments shorter than this are not worth transcribing (0.5 s).
+const LIVE_MIN_SEGMENT: usize = 8_000;
+/// Audio kept before detected speech so the first word isn't clipped.
+const LIVE_PREROLL: usize = 6_400;
+/// 100 ms analysis window.
+const LIVE_WIN: usize = 1_600;
+/// Window RMS at or above this counts as speech.
+const LIVE_SPEECH_RMS: f32 = 0.01;
+
 pub struct VoiceSessionState {
     pub stream: Option<SendStream>,
     pub audio_buffer: Arc<Mutex<Vec<f32>>>,
@@ -42,6 +61,10 @@ pub struct VoiceSessionState {
     /// True while the current recording runs; flipped off on stop/cancel so
     /// the auto-stop monitor (if any) exits.
     pub session_active: Arc<AtomicBool>,
+    /// Samples of `audio_buffer` already committed by the live thread.
+    pub committed: Arc<AtomicUsize>,
+    /// Live transcription thread of the current recording, if any.
+    pub live_handle: Option<std::thread::JoinHandle<()>>,
 }
 
 fn notify_status(env: &mut JNIEnv, obj: &JObject, msg: &str) {
@@ -70,6 +93,130 @@ fn notify_text(env: &mut JNIEnv, obj: &JObject, text: &str) {
     }
 }
 
+fn notify_partial(env: &mut JNIEnv, obj: &JObject, text: &str, is_final: bool) {
+    if let Ok(jtxt) = env.new_string(text) {
+        let _ = env.call_method(
+            obj,
+            "onPartialText",
+            "(Ljava/lang/String;Z)V",
+            &[(&jtxt).into(), is_final.into()],
+        );
+        let _ = env.exception_clear();
+    }
+}
+
+fn window_rms(w: &[f32]) -> f32 {
+    (w.iter().map(|&x| x * x).sum::<f32>() / w.len().max(1) as f32).sqrt()
+}
+
+/// Streams text while the user is still speaking: finished sentences are
+/// delivered as final, the sentence in progress as a replaceable partial.
+/// Whatever is left when recording stops is transcribed by `stop_recording`
+/// from `committed` onward.
+fn live_loop(
+    jvm: Arc<jni::JavaVM>,
+    target_ref: GlobalRef,
+    buffer: Arc<Mutex<Vec<f32>>>,
+    active: Arc<AtomicBool>,
+    committed: Arc<AtomicUsize>,
+) {
+    let mut env = match jvm.attach_current_thread() {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    let obj = target_ref.as_obj();
+    let mut last_job_len = 0usize;
+    // Extra audio to wait for before the next partial, so a slow device
+    // spends its time on finals instead of falling behind.
+    let mut cooldown = LIVE_TICK_SAMPLES;
+
+    while active.load(Ordering::SeqCst) {
+        std::thread::sleep(Duration::from_millis(LIVE_POLL_MS));
+        if !active.load(Ordering::SeqCst) {
+            break;
+        }
+        let start = committed.load(Ordering::SeqCst);
+        let seg: Vec<f32> = {
+            let b = buffer.lock().unwrap();
+            if b.len() <= start {
+                continue;
+            }
+            b[start..].to_vec()
+        };
+
+        let wins: Vec<f32> = seg.chunks(LIVE_WIN).map(window_rms).collect();
+        let first_speech = wins.iter().position(|&r| r >= LIVE_SPEECH_RMS);
+        let Some(first) = first_speech else {
+            // Only silence so far: skip it, keeping a little pre-roll.
+            let skip = seg.len().saturating_sub(LIVE_PREROLL);
+            committed.store(start + skip, Ordering::SeqCst);
+            last_job_len = 0;
+            continue;
+        };
+        if first * LIVE_WIN > LIVE_PREROLL {
+            // Drop the leading silence before the speech.
+            let skip = first * LIVE_WIN - LIVE_PREROLL;
+            committed.store(start + skip, Ordering::SeqCst);
+            last_job_len = 0;
+            continue;
+        }
+
+        let silence: usize = wins
+            .iter()
+            .rev()
+            .take_while(|&&r| r < LIVE_SPEECH_RMS)
+            .count()
+            * LIVE_WIN;
+        let by_silence = silence >= LIVE_FINALIZE_SILENCE;
+        let by_length = seg.len() >= LIVE_MAX_SEGMENT;
+
+        let (samples, is_final, consumed) = if by_silence || by_length {
+            if seg.len() < LIVE_MIN_SEGMENT {
+                continue;
+            }
+            let cut = if by_silence {
+                seg.len()
+            } else {
+                // Forced cut mid-speech: split at the quietest point of the
+                // last seconds so no word is chopped in half.
+                let from = seg.len().saturating_sub(3 * 16_000);
+                crate::audio::find_quietest_split(&seg, from, seg.len())
+            };
+            (seg[..cut].to_vec(), true, cut)
+        } else if seg.len() >= LIVE_MIN_SEGMENT
+            && seg.len().saturating_sub(last_job_len) >= cooldown
+        {
+            (seg.clone(), false, 0)
+        } else {
+            continue;
+        };
+
+        let Some(eng) = engine::get_engine() else { continue };
+        let started = Instant::now();
+        let res = engine::transcribe_shared(&eng, crate::audio::trim_silence(samples));
+        let elapsed = started.elapsed().as_secs_f32();
+
+        if !active.load(Ordering::SeqCst) {
+            // Stopped while transcribing: stop_recording redoes this audio.
+            break;
+        }
+        if is_final {
+            committed.store(start + consumed, Ordering::SeqCst);
+            last_job_len = 0;
+        } else {
+            last_job_len = seg.len();
+            // Wait for at least as much new audio as this job took to run.
+            cooldown = ((elapsed.max(0.7)) * 16_000.0) as usize;
+        }
+        if let Ok(text) = res {
+            let text = text.trim();
+            if !text.is_empty() || is_final {
+                notify_partial(&mut env, obj, text, is_final);
+            }
+        }
+    }
+}
+
 pub fn init_session(env: JNIEnv, target: JObject) -> VoiceSessionState {
     android_logger::init_once(
         android_logger::Config::default().with_max_level(log::LevelFilter::Info),
@@ -86,6 +233,8 @@ pub fn init_session(env: JNIEnv, target: JObject) -> VoiceSessionState {
         target_ref: target_ref.clone(),
         last_level_sent: Arc::new(Mutex::new(std::time::Instant::now())),
         session_active: Arc::new(AtomicBool::new(false)),
+        committed: Arc::new(AtomicUsize::new(0)),
+        live_handle: None,
     };
 
     // Load engine in background
@@ -103,7 +252,12 @@ pub fn init_session(env: JNIEnv, target: JObject) -> VoiceSessionState {
 /// for trailing silence after speech (or a no-speech timeout) and invokes the
 /// Java-side `onAutoStop()` callback, which is expected to stop the recording
 /// the same way a manual tap would.
-pub fn start_recording(mut env: JNIEnv, state: &mut VoiceSessionState, auto_stop: bool) {
+pub fn start_recording(
+    mut env: JNIEnv,
+    state: &mut VoiceSessionState,
+    auto_stop: bool,
+    live: bool,
+) {
     let host = cpal::default_host();
     let device = match host.default_input_device() {
         Some(d) => d,
@@ -124,6 +278,7 @@ pub fn start_recording(mut env: JNIEnv, state: &mut VoiceSessionState, auto_stop
     };
 
     state.audio_buffer.lock().unwrap().clear();
+    state.committed.store(0, Ordering::SeqCst);
     let buffer_clone = state.audio_buffer.clone();
 
     // End any previous session's monitor, then arm a fresh flag.
@@ -199,6 +354,18 @@ pub fn start_recording(mut env: JNIEnv, state: &mut VoiceSessionState, auto_stop
             state.stream = Some(SendStream(s));
             notify_status(&mut env, state.target_ref.as_obj(), "Listening...");
 
+            if live {
+                let (jvm, target_ref) = (state.jvm.clone(), state.target_ref.clone());
+                let (buf, act, com) = (
+                    state.audio_buffer.clone(),
+                    session_active.clone(),
+                    state.committed.clone(),
+                );
+                state.live_handle = Some(std::thread::spawn(move || {
+                    live_loop(jvm, target_ref, buf, act, com)
+                }));
+            }
+
             if let Some(ep) = endpoint {
                 let jvm = state.jvm.clone();
                 let target_ref = state.target_ref.clone();
@@ -248,7 +415,10 @@ pub fn stop_recording(mut env: JNIEnv, state: &mut VoiceSessionState) {
     state.session_active.store(false, Ordering::SeqCst);
     state.stream = None;
 
-    let buffer = state.audio_buffer.lock().unwrap().clone();
+    let mut buffer = state.audio_buffer.lock().unwrap().clone();
+    let live_handle = state.live_handle.take();
+    let committed = state.committed.clone();
+    let is_live = live_handle.is_some();
 
     // Guard against empty buffer (mic permission denied, instant stop, etc.)
     if buffer.is_empty() {
@@ -272,11 +442,31 @@ pub fn stop_recording(mut env: JNIEnv, state: &mut VoiceSessionState) {
         };
         let obj = target_ref.as_obj();
 
+        // Let an in-flight live job finish, then transcribe only what it has
+        // not already committed.
+        if let Some(h) = live_handle {
+            let _ = h.join();
+        }
+        if is_live {
+            // Read after the join so we see everything the live thread
+            // committed; `buffer` was cloned at stop time, offsets still match.
+            let done = committed.load(Ordering::SeqCst).min(buffer.len());
+            buffer.drain(..done);
+        }
+
         // Wait for engine if somehow still loading
         if engine::get_engine().is_none() {
             if let Err(_) = engine::ensure_loaded(&mut env, obj) {
                 return;
             }
+        }
+
+        // A live session whose remaining audio is only silence has nothing
+        // left to say; the text was already delivered as finals.
+        if is_live && buffer.iter().all(|&x| x.abs() < 0.01) {
+            notify_status(&mut env, obj, "Ready");
+            notify_text(&mut env, obj, "");
+            return;
         }
 
         if let Some(eng_arc) = engine::get_engine() {
@@ -298,6 +488,7 @@ pub fn stop_recording(mut env: JNIEnv, state: &mut VoiceSessionState) {
 pub fn cancel_recording(mut env: JNIEnv, state: &mut VoiceSessionState) {
     state.session_active.store(false, Ordering::SeqCst);
     state.stream = None;
+    state.live_handle = None;
     state.audio_buffer.lock().unwrap().clear();
     notify_status(&mut env, state.target_ref.as_obj(), "Canceled");
 }
