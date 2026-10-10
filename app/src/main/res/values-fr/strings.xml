@@ -125,7 +125,7 @@
     <string name="floating_mic_side_right">Collé au bord droit</string>
     <string name="floating_mic_layout_hint">Faites glisser le bouton pour le déplacer. Sa position est mémorisée séparément pour chaque disposition d\'écran (fermé ou ouvert, portrait ou paysage) : il retrouve sa place quand vous pliez, dépliez ou tournez le téléphone.</string>
     <string name="floating_mic_stop_zone">Zone d\'arrêt sur le clavier</string>
-    <string name="floating_mic_stop_zone_desc">Pendant l\'enregistrement, toucher n\'importe où sur le clavier l\'arrête : votre doigt reste près du bouton d\'envoi. On ne peut pas taper au clavier tant que l\'enregistrement n\'est pas arrêté.</string>
+    <string name="floating_mic_stop_zone_desc">Toucher la bulle ouvre une grande zone sur le clavier qui lance et arrête l\'enregistrement, pratique en voiture. Elle reste en place jusqu\'à ce que vous retouchiez la bulle. On ne peut pas taper au clavier tant qu\'elle est ouverte.</string>
     <string name="floating_mic_stop_zone_label">Touchez ici pour arrêter</string>
     <string name="floating_mic_reset">Réinitialiser les positions</string>
     <string name="floating_mic_reset_done">Positions du bouton réinitialisées</string>
@@ -158,4 +158,6 @@
     <string name="update_error_no_apk">Aucun APK compatible dans la dernière version.</string>
     <string name="update_error_not_allowed">Autorisez l\'installation d\'applications inconnues pour cette app.</string>
     <string name="update_error_generic">La mise à jour a échoué : %1$s</string>
+    <string name="floating_mic_zone_start">Touchez ici pour parler</string>
+    <string name="floating_mic_zone_processing">Transcription…</string>
 </resources>

@@ -131,7 +131,7 @@
     <string name="floating_mic_side_right">Stuck to the right edge</string>
     <string name="floating_mic_layout_hint">Drag the button to move it. Its position is remembered separately for each screen layout (folded or unfolded, portrait or landscape), so it goes back to the right place when you fold, unfold or rotate your phone.</string>
     <string name="floating_mic_stop_zone">Stop zone over the keyboard</string>
-    <string name="floating_mic_stop_zone_desc">While recording, tapping anywhere on the keyboard stops the recording, so your finger stays close to the send button. The keyboard can\'t be typed on until the recording is stopped.</string>
+    <string name="floating_mic_stop_zone_desc">Tapping the bubble opens a large zone over the keyboard that starts and stops the recording, handy when driving. It stays until you tap the bubble again. The keyboard can\'t be typed on while it is open.</string>
     <string name="floating_mic_stop_zone_label">Tap here to stop</string>
     <string name="floating_mic_reset">Reset positions</string>
     <string name="floating_mic_reset_done">Button positions reset</string>
@@ -164,4 +164,6 @@
     <string name="update_error_no_apk">No compatible APK in the latest release.</string>
     <string name="update_error_not_allowed">Allow this app to install unknown apps.</string>
     <string name="update_error_generic">The update failed: %1$s</string>
+    <string name="floating_mic_zone_start">Tap here to speak</string>
+    <string name="floating_mic_zone_processing">Transcribing…</string>
 </resources>
