@@ -430,6 +430,7 @@ public class FloatingMicService extends Service {
             stopZoneParams.y = kb.top;
             try {
                 windowManager.addView(stopZone, stopZoneParams);
+                bringBubbleToFront();
             } catch (Exception e) {
                 Log.e(TAG, "Failed to add the stop zone", e);
                 stopZone = null;
@@ -464,6 +465,23 @@ public class FloatingMicService extends Service {
             stopZoneIcon.setScaleX(1f);
             stopZoneIcon.setScaleY(1f);
         }
+    }
+
+    /**
+     * Overlay windows stack in the order they were added, so the zone (added later) would sit
+     * on top of the bubble and swallow its taps. Re-adding the bubble puts it back on top.
+     * Posted so it doesn't run inside the bubble's own touch handler.
+     */
+    private void bringBubbleToFront() {
+        mainHandler.post(() -> {
+            if (bubble == null || stopZone == null) return;
+            try {
+                windowManager.removeViewImmediate(bubble);
+                windowManager.addView(bubble, params);
+            } catch (Exception e) {
+                Log.w(TAG, "Could not raise the bubble above the zone", e);
+            }
+        });
     }
 
     private void removeStopZone() {
