@@ -56,6 +56,9 @@ public class MainActivity extends AppCompatActivity {
     private CompoundButton floatingSwitch;
     private Button quickNextButton;
     private final ImageView[] quickStepIcons = new ImageView[4];
+    // First-launch guided setup: chains the quick-start steps as the user comes back.
+    private boolean onboardingActive;
+    private int onboardingDone;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -234,6 +237,7 @@ public class MainActivity extends AppCompatActivity {
         // Initial check
         updateVoiceInputStatus();
         updateQuickStart();
+        maybeShowOnboarding();
 
         // Start init
         initNative(this);
@@ -245,6 +249,50 @@ public class MainActivity extends AppCompatActivity {
         // Re-check on return from the keyboard chooser, settings, or a test run.
         updateVoiceInputStatus();
         updateQuickStart();
+        advanceOnboarding();
+    }
+
+    private void maybeShowOnboarding() {
+        android.content.SharedPreferences prefs = getSharedPreferences("onboarding", MODE_PRIVATE);
+        if (prefs.getBoolean("shown", false)) return;
+        prefs.edit().putBoolean("shown", true).apply();
+        if (quickDoneCount() == 4) return;
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.onboarding_title)
+                .setMessage(R.string.onboarding_body)
+                .setCancelable(false)
+                .setPositiveButton(R.string.onboarding_start, (d, w) -> {
+                    onboardingActive = true;
+                    onboardingDone = quickDoneCount();
+                    onQuickNext();
+                })
+                .setNegativeButton(R.string.onboarding_later, null)
+                .show();
+    }
+
+    /** After each return from a settings screen, open the next missing step automatically. */
+    private void advanceOnboarding() {
+        if (!onboardingActive) return;
+        int done = quickDoneCount();
+        if (done == 4) {
+            onboardingActive = false;
+            snackbar(getString(R.string.onboarding_done));
+        } else if (done > onboardingDone) {
+            onboardingDone = done;
+            onQuickNext();
+        } else {
+            // The user came back without completing the step: stop nagging.
+            onboardingActive = false;
+        }
+    }
+
+    private int quickDoneCount() {
+        int n = 0;
+        if (hasMic()) n++;
+        if (Settings.canDrawOverlays(this)) n++;
+        if (isDictationA11yEnabled()) n++;
+        if (FloatingMicPrefs.isEnabled(this)) n++;
+        return n;
     }
 
     private boolean hasMic() {

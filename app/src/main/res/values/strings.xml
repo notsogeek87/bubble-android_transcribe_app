@@ -182,4 +182,9 @@
     <string name="quick_a11y_help">In Accessibility, open “Installed apps” (or “Downloaded apps”), choose “Offline Voice Input”, then “Floating mic button”, and switch it on.</string>
     <string name="other_modes_show">Show other modes and settings</string>
     <string name="other_modes_hide">Hide other modes and settings</string>
+    <string name="onboarding_title">Welcome! Let\'s set up your mic bubble</string>
+    <string name="onboarding_body">This app types what you say into any app, fully offline. It takes 4 quick steps: microphone, display over other apps, text insertion (Accessibility) and the bubble itself.\n\nAfter each step, come back here and the next one opens by itself.</string>
+    <string name="onboarding_start">Start</string>
+    <string name="onboarding_later">Later</string>
+    <string name="onboarding_done">All set! Open any app, tap a text field, then tap the bubble and speak.</string>
 </resources>

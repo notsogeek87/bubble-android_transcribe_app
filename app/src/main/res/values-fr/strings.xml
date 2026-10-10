@@ -176,4 +176,9 @@
     <string name="quick_a11y_help">Dans Accessibilité, ouvrez « Applications installées » (ou « Applications téléchargées »), choisissez « Offline Voice Input », puis le bouton micro flottant, et activez-le.</string>
     <string name="other_modes_show">Afficher les autres modes et réglages</string>
     <string name="other_modes_hide">Masquer les autres modes et réglages</string>
+    <string name="onboarding_title">Bienvenue ! Configurons votre bulle micro</string>
+    <string name="onboarding_body">Cette appli écrit ce que vous dites dans n\'importe quelle appli, entièrement hors ligne. Il faut 4 étapes rapides : micro, affichage par-dessus les autres applis, insertion du texte (Accessibilité) et la bulle elle-même.\n\nAprès chaque étape, revenez ici : la suivante s\'ouvre toute seule.</string>
+    <string name="onboarding_start">Commencer</string>
+    <string name="onboarding_later">Plus tard</string>
+    <string name="onboarding_done">Tout est prêt ! Ouvrez une appli, touchez un champ de texte, puis touchez la bulle et parlez.</string>
 </resources>
