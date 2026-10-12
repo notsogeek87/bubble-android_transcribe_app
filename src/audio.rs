@@ -30,8 +30,18 @@ const TRIM_PAD_FRAMES: usize = 20; // 400 ms
 const TRIM_MIN_RMS: f32 = 0.008;
 /// Speech must be this many times louder than the background noise.
 const TRIM_NOISE_RATIO: f32 = 3.0;
+/// Speech onset = at least `TRIM_SUSTAIN_MIN` loud frames out of
+/// `TRIM_SUSTAIN_FRAMES` consecutive ones (80 ms of 100 ms).
+const TRIM_SUSTAIN_FRAMES: usize = 5;
+const TRIM_SUSTAIN_MIN: usize = 4;
 /// Don't bother cutting less than this (0.5 s): not worth the risk.
 const TRIM_MIN_SAVING: usize = 8_000;
+
+/// Mirror of the onset test for the end of the speech.
+fn sustained_back(voiced: &[bool], i: usize) -> bool {
+    let from = (i + 1).saturating_sub(TRIM_SUSTAIN_FRAMES);
+    voiced[from..=i].iter().filter(|&&v| v).count() >= TRIM_SUSTAIN_MIN
+}
 
 /// Drops leading and trailing silence from a dictation clip.
 ///
@@ -57,8 +67,22 @@ pub fn trim_silence(samples: Vec<f32>) -> Vec<f32> {
     let noise = quiet.iter().sum::<f32>() / quiet.len() as f32;
     let threshold = (noise * TRIM_NOISE_RATIO).max(TRIM_MIN_RMS);
 
-    let first = frames.iter().position(|&r| r > threshold);
-    let last = frames.iter().rposition(|&r| r > threshold);
+    // A lone click (the tap that starts the recording, a pop on mic open) is
+    // louder than the threshold for a frame or two. Treating it as speech
+    // keeps it as the clip's "content" and Whisper then hallucinates a word
+    // ("Yeah.") from the click plus silence. Speech must be sustained.
+    let voiced: Vec<bool> = frames.iter().map(|&r| r > threshold).collect();
+    let sustained = |i: usize| {
+        voiced[i] && voiced[i..(i + TRIM_SUSTAIN_FRAMES).min(voiced.len())]
+            .iter()
+            .filter(|&&v| v)
+            .count()
+            >= TRIM_SUSTAIN_MIN
+    };
+    let first = (0..voiced.len()).find(|&i| sustained(i));
+    let last = (0..voiced.len())
+        .rev()
+        .find(|&i| voiced[i] && sustained_back(&voiced, i));
     let (first, last) = match (first, last) {
         (Some(f), Some(l)) => (f, l),
         _ => return samples,
@@ -122,6 +146,19 @@ mod tests {
         // Constant noise with speech clearly louder: ends still trimmed.
         let out = trim_silence(clip(2.0, 3.0, 2.0, 0.02));
         assert!(out.len() < 6 * 16_000);
+    }
+
+    #[test]
+    fn leading_click_is_not_speech() {
+        // 30 ms click, 2 s of silence, then real speech: the click must be
+        // trimmed away rather than anchoring the start of the clip.
+        let mut v = tone(0.03, 0.4);
+        v.extend(tone(2.0, 0.001));
+        v.extend(tone(3.0, 0.3));
+        v.extend(tone(2.0, 0.001));
+        let out = trim_silence(v);
+        let secs = out.len() as f32 / 16_000.0;
+        assert!((secs - 3.8).abs() < 0.1, "got {secs}");
     }
 
     #[test]
