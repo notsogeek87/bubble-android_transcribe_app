@@ -189,6 +189,17 @@ public class MainActivity extends AppCompatActivity {
         bindMarkerSwitch(R.id.switch_record_background, "stop_on_hide", true);
         bindMarkerSwitch(R.id.switch_auto_stop, "auto_stop", false);
 
+        // Auto-stop silence delay: 2 s (default), 4 s, 6 s or 10 s.
+        RadioGroup stopDelayGroup = findViewById(R.id.rg_auto_stop_delay);
+        int stopDelay = AutoStopPrefs.getDelayMs(this);
+        stopDelayGroup.check(stopDelay >= 10000 ? R.id.rb_stop_10
+                : stopDelay >= 6000 ? R.id.rb_stop_6
+                : stopDelay >= 4000 ? R.id.rb_stop_4 : R.id.rb_stop_2);
+        stopDelayGroup.setOnCheckedChangeListener((group, checkedId) ->
+                AutoStopPrefs.setDelayMs(this, checkedId == R.id.rb_stop_10 ? 10000
+                        : checkedId == R.id.rb_stop_6 ? 6000
+                        : checkedId == R.id.rb_stop_4 ? 4000 : 2000));
+
         // Live subtitle line limit: 2 (default), 4, or 0 = unlimited.
         RadioGroup subsLinesGroup = findViewById(R.id.rg_subtitle_lines);
         int subsLines = SubtitlePrefs.getMaxLines(this);

@@ -36,6 +36,12 @@
 
     <string name="setting_auto_stop">Arresto automatico dopo il silenzio</string>
     <string name="setting_auto_stop_desc">Chiudi la finestra di immissione vocale automaticamente ~2 secondi dopo la fine del parlato</string>
+    <string name="setting_auto_stop_delay">Ritardo dell\'arresto automatico</string>
+    <string name="setting_auto_stop_delay_desc">Quanto silenzio attendere prima di fermarsi. Un ritardo più lungo ti dà anche più tempo per iniziare a parlare</string>
+    <string name="auto_stop_delay_2">2 s</string>
+    <string name="auto_stop_delay_4">4 s</string>
+    <string name="auto_stop_delay_6">6 s</string>
+    <string name="auto_stop_delay_10">10 s</string>
 
     <string name="setting_subtitle_lines">Lunghezza sottotitoli</string>
     <string name="setting_subtitle_lines_desc">Quante righe mostrano i sottotitoli in tempo reale; il testo più vecchio scorre via</string>

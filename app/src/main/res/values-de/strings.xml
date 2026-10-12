@@ -36,6 +36,12 @@
 
     <string name="setting_auto_stop">Auto-Stopp bei Stille</string>
     <string name="setting_auto_stop_desc">Spracheingabe-Popup automatisch ~2 Sekunden nach dem Sprechende beenden</string>
+    <string name="setting_auto_stop_delay">Auto-Stopp-Verzögerung</string>
+    <string name="setting_auto_stop_delay_desc">Wie lange Stille abgewartet wird, bevor gestoppt wird. Eine längere Verzögerung gibt dir auch mehr Zeit, mit dem Sprechen zu beginnen</string>
+    <string name="auto_stop_delay_2">2 s</string>
+    <string name="auto_stop_delay_4">4 s</string>
+    <string name="auto_stop_delay_6">6 s</string>
+    <string name="auto_stop_delay_10">10 s</string>
 
     <string name="setting_subtitle_lines">Untertitellänge</string>
     <string name="setting_subtitle_lines_desc">Wie viele Zeilen die Live-Untertitel anzeigen; älterer Text scrollt weg</string>

@@ -36,6 +36,12 @@
 
     <string name="setting_auto_stop">Автостоп при тишине</string>
     <string name="setting_auto_stop_desc">Автоматически закрывать окно голосового ввода примерно через 2 секунды после окончания речи</string>
+    <string name="setting_auto_stop_delay">Задержка автостопа</string>
+    <string name="setting_auto_stop_delay_desc">Сколько ждать тишины перед остановкой. Большая задержка также даёт больше времени, чтобы начать говорить</string>
+    <string name="auto_stop_delay_2">2 с</string>
+    <string name="auto_stop_delay_4">4 с</string>
+    <string name="auto_stop_delay_6">6 с</string>
+    <string name="auto_stop_delay_10">10 с</string>
 
     <string name="setting_subtitle_lines">Длина субтитров</string>
     <string name="setting_subtitle_lines_desc">Сколько строк показывают субтитры; более старый текст прокручивается</string>

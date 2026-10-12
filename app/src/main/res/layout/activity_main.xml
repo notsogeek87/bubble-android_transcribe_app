@@ -871,6 +871,63 @@
                             android:layout_height="wrap_content"/>
                     </LinearLayout>
 
+                    <!-- Auto-stop delay -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/setting_auto_stop_delay"
+                            android:textAppearance="?attr/textAppearanceBodyLarge"/>
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/setting_auto_stop_delay_desc"
+                            android:textAppearance="?attr/textAppearanceBodySmall"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            android:layout_marginTop="2dp"/>
+
+                        <RadioGroup
+                            android:id="@+id/rg_auto_stop_delay"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="4dp">
+
+                            <RadioButton
+                                android:id="@+id/rb_stop_2"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/auto_stop_delay_2"/>
+
+                            <RadioButton
+                                android:id="@+id/rb_stop_4"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
+                                android:text="@string/auto_stop_delay_4"/>
+
+                            <RadioButton
+                                android:id="@+id/rb_stop_6"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
+                                android:text="@string/auto_stop_delay_6"/>
+
+                            <RadioButton
+                                android:id="@+id/rb_stop_10"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
+                                android:text="@string/auto_stop_delay_10"/>
+                        </RadioGroup>
+                    </LinearLayout>
+
                     <!-- Subtitle line count -->
                     <LinearLayout
                         android:layout_width="match_parent"

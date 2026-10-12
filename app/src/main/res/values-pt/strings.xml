@@ -36,6 +36,12 @@
 
     <string name="setting_auto_stop">Parada automática após silêncio</string>
     <string name="setting_auto_stop_desc">Fechar a janela de entrada de voz automaticamente ~2 segundos após você parar de falar</string>
+    <string name="setting_auto_stop_delay">Atraso da parada automática</string>
+    <string name="setting_auto_stop_delay_desc">Quanto silêncio esperar antes de parar. Um atraso maior também dá mais tempo para começar a falar</string>
+    <string name="auto_stop_delay_2">2 s</string>
+    <string name="auto_stop_delay_4">4 s</string>
+    <string name="auto_stop_delay_6">6 s</string>
+    <string name="auto_stop_delay_10">10 s</string>
 
     <string name="setting_subtitle_lines">Comprimento das legendas</string>
     <string name="setting_subtitle_lines_desc">Quantas linhas as legendas ao vivo mostram; o texto mais antigo rola para fora</string>

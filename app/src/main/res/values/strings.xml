@@ -37,6 +37,12 @@
 
     <string name="setting_auto_stop">Auto-stop after silence</string>
     <string name="setting_auto_stop_desc">End the voice input popup automatically ~2 seconds after you stop speaking</string>
+    <string name="setting_auto_stop_delay">Auto-stop delay</string>
+    <string name="setting_auto_stop_delay_desc">How long to wait in silence before stopping. A longer delay also gives you more time to start speaking</string>
+    <string name="auto_stop_delay_2">2 s</string>
+    <string name="auto_stop_delay_4">4 s</string>
+    <string name="auto_stop_delay_6">6 s</string>
+    <string name="auto_stop_delay_10">10 s</string>
 
     <string name="setting_subtitle_lines">Subtitle length</string>
     <string name="setting_subtitle_lines_desc">How many lines the live subtitles show; older text scrolls away</string>

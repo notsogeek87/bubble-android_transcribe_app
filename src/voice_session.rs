@@ -16,10 +16,26 @@ const SPEECH_MARGIN: f32 = 0.04;
 /// The noise floor never climbs above this, so a loud room can't make speech
 /// look like silence.
 const MAX_NOISE_FLOOR: f32 = 0.08;
-/// Trailing silence after speech that triggers auto-stop.
+/// Default trailing silence after speech that triggers auto-stop. The user can
+/// change it in the settings (`auto_stop_ms` file in filesDir).
 const AUTO_STOP_SILENCE_MS: u64 = 2000;
-/// If no speech is ever detected, auto-stop after this long.
-const AUTO_STOP_NO_SPEECH_MS: u64 = 8000;
+/// Accepted range for the configured delay.
+const AUTO_STOP_MIN_MS: u64 = 1000;
+const AUTO_STOP_MAX_MS: u64 = 30_000;
+/// If no speech is ever detected, auto-stop after this many times the silence
+/// delay (8 s at the default), so a longer delay also leaves more time to
+/// start talking.
+const AUTO_STOP_NO_SPEECH_FACTOR: u64 = 4;
+
+/// Reads the configured auto-stop silence delay, falling back to the default.
+fn auto_stop_silence_ms(env: &mut JNIEnv, context: &JObject) -> u64 {
+    crate::assets::files_dir(env, context)
+        .ok()
+        .and_then(|dir| std::fs::read_to_string(dir.join("auto_stop_ms")).ok())
+        .and_then(|s| s.trim().parse::<u64>().ok())
+        .map(|ms| ms.clamp(AUTO_STOP_MIN_MS, AUTO_STOP_MAX_MS))
+        .unwrap_or(AUTO_STOP_SILENCE_MS)
+}
 
 pub struct SendStream(#[allow(dead_code)] pub cpal::Stream);
 unsafe impl Send for SendStream {}
@@ -286,6 +302,11 @@ pub fn start_recording(
     let session_active = Arc::new(AtomicBool::new(true));
     state.session_active = session_active.clone();
 
+    let silence_ms = if auto_stop {
+        auto_stop_silence_ms(&mut env, state.target_ref.as_obj())
+    } else {
+        AUTO_STOP_SILENCE_MS
+    };
     let endpoint = if auto_stop {
         Some(Arc::new(Endpointing {
             last_voice: Mutex::new(Instant::now()),
@@ -378,10 +399,10 @@ pub fn start_recording(
                     let speech = ep.speech_started.load(Ordering::SeqCst);
                     let silence = ep.last_voice.lock().unwrap().elapsed();
                     let done = (speech
-                        && silence >= Duration::from_millis(AUTO_STOP_SILENCE_MS))
+                        && silence >= Duration::from_millis(silence_ms))
                         || (!speech
                             && started_at.elapsed()
-                                >= Duration::from_millis(AUTO_STOP_NO_SPEECH_MS));
+                                >= Duration::from_millis(silence_ms * AUTO_STOP_NO_SPEECH_FACTOR));
                     if done {
                         // Claim the session so a simultaneous manual stop and
                         // this monitor can't both fire.
