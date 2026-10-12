@@ -151,11 +151,17 @@ public class DictationAccessibilityService extends AccessibilityService {
     // the cursor, so we never overwrite anything the user wrote.
     private static int liveStart = -1;
     private static String liveText = "";
+    // Updates carry the whole sentence in progress. If the field loses what we
+    // wrote (message sent, text cleared or edited) mid-sentence, that sentence
+    // is already dealt with: remember it so only the words spoken after it are
+    // typed, instead of writing the whole sentence again.
+    private static String abandonedPrefix = null;
 
     /** Forgets the live anchor; call when a dictation starts or is cancelled. */
     public static void resetLive() {
         liveStart = -1;
         liveText = "";
+        abandonedPrefix = null;
     }
 
     /**
@@ -169,11 +175,27 @@ public class DictationAccessibilityService extends AccessibilityService {
         if (field == null) return false;
         String old = currentText(field, exposesPlaceholderAsText(field));
 
-        int from;
-        int to;
         boolean anchored = liveStart >= 0
                 && liveStart + liveText.length() <= old.length()
                 && old.startsWith(liveText, liveStart);
+        if (!anchored && !liveText.isEmpty()) {
+            abandonedPrefix = abandonedPrefix == null
+                    ? liveText : abandonedPrefix.trim() + " " + liveText;
+            liveText = "";
+            liveStart = -1;
+        }
+        if (abandonedPrefix != null) {
+            String prefix = abandonedPrefix.trim();
+            if (isFinal) abandonedPrefix = null;
+            if (!text.startsWith(prefix)) return true;
+            String rest = text.substring(prefix.length()).trim();
+            text = rest.isEmpty() ? "" : isFinal ? rest + " " : rest;
+            // Nothing new since the sentence was dealt with.
+            if (!anchored && text.isEmpty()) return true;
+        }
+
+        int from;
+        int to;
         if (anchored) {
             from = liveStart;
             to = liveStart + liveText.length();
