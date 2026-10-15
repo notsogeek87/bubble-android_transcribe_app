@@ -111,7 +111,7 @@
         <!-- Restores the floating mic (and accessibility binding) after an update or reboot -->
         <receiver
             android:name=".PackageReplacedReceiver"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
