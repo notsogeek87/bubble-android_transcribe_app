@@ -12,7 +12,9 @@ import android.util.TypedValue;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.RadioGroup;
 import android.widget.TextView;
 
@@ -215,6 +217,8 @@ public class MainActivity extends AppCompatActivity {
                     : checkedId == R.id.rb_subs_all ? 0 : 2;
             SubtitlePrefs.setMaxLines(this, lines);
         });
+
+        findViewById(R.id.btn_vocabulary).setOnClickListener(v -> showVocabularyDialog());
 
         RadioGroup themeGroup = findViewById(R.id.rg_theme);
         switch (ThemePrefs.getMode(this)) {
@@ -619,4 +623,40 @@ public class MainActivity extends AppCompatActivity {
     private native void initNative(MainActivity activity);
 
     private native void benchmarkNative(MainActivity activity, float[] samples, int length);
+
+    /** Editor for the personal vocabulary (see {@link VocabularyPrefs}). */
+    private void showVocabularyDialog() {
+        float d = getResources().getDisplayMetrics().density;
+        int pad = Math.round(20 * d);
+
+        TextView help = new TextView(this);
+        help.setText(R.string.vocabulary_dialog_help);
+        help.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodySmall);
+
+        EditText input = new EditText(this);
+        input.setText(VocabularyPrefs.get(this));
+        input.setHint(R.string.vocabulary_hint);
+        input.setMinLines(5);
+        input.setGravity(android.view.Gravity.TOP | android.view.Gravity.START);
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+                | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(pad, Math.round(8 * d), pad, 0);
+        box.addView(help);
+        box.addView(input);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.vocabulary_dialog_title)
+                .setView(box)
+                .setPositiveButton(android.R.string.ok, (dlg, which) -> {
+                    VocabularyPrefs.set(this, input.getText().toString());
+                    Snackbar.make(findViewById(android.R.id.content),
+                            R.string.vocabulary_saved, Snackbar.LENGTH_SHORT).show();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
 }

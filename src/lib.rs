@@ -9,4 +9,5 @@ pub mod recog_service;
 pub mod recognize;
 pub mod subtitle;
 pub mod transcribe_file;
+pub mod vocabulary;
 pub mod voice_session;

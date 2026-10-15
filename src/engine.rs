@@ -229,7 +229,8 @@ pub fn transcribe_shared(engine: &Arc<Mutex<Engine>>, samples: Vec<f32>) -> Resu
     .unwrap_or_else(|_| {
         log::error!("transcription panicked; reporting as error");
         Err("transcription failed unexpectedly, please try again".to_string())
-    });
+    })
+    .map(crate::vocabulary::apply_configured);
     log::info!(
         "transcribed {:.1}s audio in {:.2}s",
         audio_secs,
@@ -448,6 +449,7 @@ fn do_load(env: &mut JNIEnv, context: &JObject) -> Result<(), String> {
         notify_status(env, context, &format!("Error: {}", msg));
         msg
     })?;
+    crate::vocabulary::set_path(crate::vocabulary::path_in(&files_dir));
     // Absent/empty or "auto" = no hint (the model's automatic mode). A tag
     // the model doesn't know is degraded per run — see Engine::run.
     let language = read_config(&files_dir.join(MODEL_LANGUAGE_FILE))

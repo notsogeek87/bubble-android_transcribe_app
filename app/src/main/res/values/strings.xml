@@ -193,4 +193,11 @@
     <string name="onboarding_start">Start</string>
     <string name="onboarding_later">Later</string>
     <string name="onboarding_done">All set! Open any app, tap a text field, then tap the bubble and speak.</string>
+    <string name="setting_vocabulary">Personal vocabulary</string>
+    <string name="setting_vocabulary_desc">Fix names and nicknames the model gets wrong. Corrections are applied to the transcribed text, fully offline</string>
+    <string name="btn_vocabulary">Edit vocabulary</string>
+    <string name="vocabulary_dialog_title">Personal vocabulary</string>
+    <string name="vocabulary_dialog_help">One rule per line:\n• heard => wanted   (e.g. sandrine => Sandrine)\n• Wanted   (just fixes the spelling of that word)\nCase is ignored when matching.</string>
+    <string name="vocabulary_hint">sandrine => Sandrine\nma chérie => Sandrine</string>
+    <string name="vocabulary_saved">Vocabulary saved</string>
 </resources>

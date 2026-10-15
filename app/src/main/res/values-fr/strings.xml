@@ -187,4 +187,11 @@
     <string name="onboarding_start">Commencer</string>
     <string name="onboarding_later">Plus tard</string>
     <string name="onboarding_done">Tout est prêt ! Ouvrez une appli, touchez un champ de texte, puis touchez la bulle et parlez.</string>
+    <string name="setting_vocabulary">Vocabulaire personnel</string>
+    <string name="setting_vocabulary_desc">Corrige les prénoms et diminutifs que le modèle écrit mal. Les corrections sont appliquées au texte transcrit, 100 % hors-ligne</string>
+    <string name="btn_vocabulary">Modifier le vocabulaire</string>
+    <string name="vocabulary_dialog_title">Vocabulaire personnel</string>
+    <string name="vocabulary_dialog_help">Une règle par ligne :\n• entendu => voulu   (ex. sandrine => Sandrine)\n• Voulu   (corrige seulement l\'orthographe de ce mot)\nLa casse est ignorée à la recherche.</string>
+    <string name="vocabulary_hint">sandrine => Sandrine\nma chérie => Sandrine</string>
+    <string name="vocabulary_saved">Vocabulaire enregistré</string>
 </resources>

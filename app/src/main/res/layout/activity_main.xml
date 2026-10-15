@@ -978,6 +978,30 @@
                         </RadioGroup>
                     </LinearLayout>
 
+                    <!-- Vocabulaire personnel : corrections appliquées au texte transcrit. -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="@string/setting_vocabulary"
+                        android:textAppearance="?attr/textAppearanceBodyLarge"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/setting_vocabulary_desc"
+                        android:textAppearance="?attr/textAppearanceBodySmall"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:layout_marginTop="2dp"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_vocabulary"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/btn_vocabulary"/>
+
                     <!-- Mises à jour : vérification forcée à la demande (UpdateUi). -->
                     <TextView
                         android:layout_width="match_parent"
