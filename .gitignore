@@ -40,3 +40,8 @@ app/src/main/jniLibs/
 # macOS
 .DS_Store
 ._*
+
+# Secrets de signature : ne jamais commiter (le debug.keystore standard reste versionné)
+*.jks
+keystore.properties
+key.properties
