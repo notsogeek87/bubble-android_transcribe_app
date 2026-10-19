@@ -293,11 +293,6 @@ public class DictationAccessibilityService extends AccessibilityService {
         return f != null;
     }
 
-    private boolean isLandscape() {
-        return getResources().getConfiguration().orientation
-                == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
-    }
-
     /** Bounds of the visible keyboard window, or null if there is none. */
     private Rect findKeyboardBounds() {
         android.util.DisplayMetrics m = new android.util.DisplayMetrics();
@@ -331,13 +326,9 @@ public class DictationAccessibilityService extends AccessibilityService {
 
     private void updateKeyboardVisibility() {
         Rect bounds = findKeyboardBounds();
-        // Unfolded foldables in landscape: the split keyboard's window is not reported
-        // reliably, so a focused text field is taken as "keyboard open" there. The big
-        // stop zone stays off in that case since it needs the keyboard's rectangle.
-        boolean landscapeFallback = bounds == null && isLandscape() && hasFocusedField();
-        boolean visible = bounds != null || landscapeFallback;
+        boolean visible = bounds != null;
         boolean visibilityChanged = visible != keyboardVisible;
-        boolean boundsChanged = bounds != null && !bounds.equals(keyboardBounds);
+        boolean boundsChanged = visible && !bounds.equals(keyboardBounds);
         keyboardBounds = bounds;
         if (!visibilityChanged && !boundsChanged) return;
         if (visibilityChanged) {

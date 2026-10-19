@@ -83,6 +83,7 @@ public class FloatingMicService extends Service {
             // Fold/unfold and rotation: wait for the new size to settle, then re-place the bubble.
             mainHandler.removeCallbacks(repositionRunnable);
             mainHandler.postDelayed(repositionRunnable, 200);
+            mainHandler.post(FloatingMicService.this::updateVisibility);
         }
     };
 
@@ -143,7 +144,16 @@ public class FloatingMicService extends Service {
         boolean show = !DictationAccessibilityService.isRunning()
                 || DictationAccessibilityService.isKeyboardVisible()
                 || isRecording || isProcessing;
+        // The keyboard can't be detected reliably on an unfolded foldable held in landscape.
+        if (isWideLandscape() && !isRecording && !isProcessing) show = false;
         bubble.setVisibility(show ? View.VISIBLE : View.GONE);
+    }
+
+    /** Tablet-sized screen (unfolded foldable) in landscape. */
+    private boolean isWideLandscape() {
+        android.content.res.Configuration c = getResources().getConfiguration();
+        return c.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                && c.smallestScreenWidthDp >= 600;
     }
 
     @Override
