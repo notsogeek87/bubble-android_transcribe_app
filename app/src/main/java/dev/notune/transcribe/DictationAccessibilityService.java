@@ -287,16 +287,10 @@ public class DictationAccessibilityService extends AccessibilityService {
         }
     };
 
-    /** Whether an app window currently has an editable field with input focus. */
+    /** Whether an app window currently has a focused text field (same lookup as typing uses). */
     private boolean hasFocusedField() {
-        for (AccessibilityWindowInfo w : getWindows()) {
-            if (w.getType() != AccessibilityWindowInfo.TYPE_APPLICATION) continue;
-            AccessibilityNodeInfo r = w.getRoot();
-            if (r == null) continue;
-            AccessibilityNodeInfo f = r.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
-            if (f != null && isTextField(f)) return true;
-        }
-        return false;
+        AccessibilityNodeInfo f = findFocusedEditable();
+        return f != null;
     }
 
     /** Bounds of the visible keyboard window, or null if there is none. */
