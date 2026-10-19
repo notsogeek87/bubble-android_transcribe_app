@@ -285,6 +285,18 @@ public class DictationAccessibilityService extends AccessibilityService {
         }
     };
 
+    /** Whether an app window currently has an editable field with input focus. */
+    private boolean hasFocusedField() {
+        for (AccessibilityWindowInfo w : getWindows()) {
+            if (w.getType() != AccessibilityWindowInfo.TYPE_APPLICATION) continue;
+            AccessibilityNodeInfo r = w.getRoot();
+            if (r == null) continue;
+            AccessibilityNodeInfo f = r.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+            if (f != null && isTextField(f)) return true;
+        }
+        return false;
+    }
+
     /** Bounds of the visible keyboard window, or null if there is none. */
     private Rect findKeyboardBounds() {
         android.util.DisplayMetrics m = new android.util.DisplayMetrics();
@@ -303,7 +315,10 @@ public class DictationAccessibilityService extends AccessibilityService {
             AccessibilityNodeInfo root = w.getRoot();
             if (root != null) {
                 root.refresh();
-                if (!root.isVisibleToUser()) {
+                // Split/floating keyboards (foldable in landscape) can report a root that is
+                // "not visible" although the keys are on screen; with a field focused and the
+                // window laid out on screen, trust the window instead.
+                if (!root.isVisibleToUser() && !hasFocusedField()) {
                     Log.d(TAG, "IME window not visible to user, ignored");
                     continue;
                 }
