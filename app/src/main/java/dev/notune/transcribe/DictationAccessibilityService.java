@@ -267,13 +267,11 @@ public class DictationAccessibilityService extends AccessibilityService {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     // Accessibility events about the keyboard closing arrive late, so while it is
-    // open we also check the windows ourselves about 20 times per second. While it is
-    // closed we keep checking slowly: some apps (WhatsApp on a unfolded foldable) open
-    // it without any windows event reaching us.
+    // open we also check the windows ourselves about 20 times per second.
     private final Runnable keyboardPoll = new Runnable() {
         @Override public void run() {
             updateKeyboardVisibility();
-            handler.postDelayed(this, keyboardVisible ? 50 : 400);
+            if (keyboardVisible) handler.postDelayed(this, 50);
         }
     };
 
@@ -286,12 +284,6 @@ public class DictationAccessibilityService extends AccessibilityService {
             if (--recheckLeft > 0) handler.postDelayed(this, 150);
         }
     };
-
-    /** Whether an app window currently has a focused text field (same lookup as typing uses). */
-    private boolean hasFocusedField() {
-        AccessibilityNodeInfo f = findFocusedEditable();
-        return f != null;
-    }
 
     /** Bounds of the visible keyboard window, or null if there is none. */
     private Rect findKeyboardBounds() {
@@ -311,10 +303,7 @@ public class DictationAccessibilityService extends AccessibilityService {
             AccessibilityNodeInfo root = w.getRoot();
             if (root != null) {
                 root.refresh();
-                // Split/floating keyboards (foldable in landscape) can report a root that is
-                // "not visible" although the keys are on screen; with a field focused and the
-                // window laid out on screen, trust the window instead.
-                if (!root.isVisibleToUser() && !hasFocusedField()) {
+                if (!root.isVisibleToUser()) {
                     Log.d(TAG, "IME window not visible to user, ignored");
                     continue;
                 }
@@ -334,7 +323,7 @@ public class DictationAccessibilityService extends AccessibilityService {
         if (visibilityChanged) {
             keyboardVisible = visible;
             handler.removeCallbacks(keyboardPoll);
-            handler.postDelayed(keyboardPoll, visible ? 50 : 400);
+            if (visible) handler.postDelayed(keyboardPoll, 50);
         }
         KeyboardListener l = keyboardListener;
         if (l != null) l.onKeyboardVisibilityChanged(visible);
@@ -345,8 +334,6 @@ public class DictationAccessibilityService extends AccessibilityService {
         super.onServiceConnected();
         instance = this;
         updateKeyboardVisibility();
-        handler.removeCallbacks(keyboardPoll);
-        handler.postDelayed(keyboardPoll, 400);
         // The bubble is gone after an update; the system binding us again is a reliable moment to bring it back.
         FloatingMicService.startIfPossible(this);
     }
