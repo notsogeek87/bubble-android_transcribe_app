@@ -74,8 +74,12 @@ public class FloatingMicService extends Service {
     private boolean isProcessing = false;
     private float opacity = 1f;
     private float density = 1f;
+    // Offset between the overlay window's origin and the real screen origin (status bar, cut-out,
+    // multi-window...). Measured on screen, so the bubble lands where the saved position says.
+    private int originX = 0, originY = 0;
     private DisplayManager displayManager;
     private final Runnable repositionRunnable = this::repositionForScreen;
+    private final Runnable syncOriginRunnable = this::syncOrigin;
     private final DisplayManager.DisplayListener displayListener = new DisplayManager.DisplayListener() {
         @Override public void onDisplayAdded(int displayId) { }
         @Override public void onDisplayRemoved(int displayId) { }
@@ -144,6 +148,8 @@ public class FloatingMicService extends Service {
                 || DictationAccessibilityService.isKeyboardVisible()
                 || isRecording || isProcessing;
         bubble.setVisibility(show ? View.VISIBLE : View.GONE);
+        // Single-app and multi-window views don't share the same window origin.
+        if (show) syncOriginSoon();
     }
 
     @Override
@@ -215,16 +221,40 @@ public class FloatingMicService extends Service {
         int side = FloatingMicPrefs.getSide(this);
         if (side == FloatingMicPrefs.SIDE_LEFT) xf = 0f;
         else if (side == FloatingMicPrefs.SIDE_RIGHT) xf = 1f;
-        params.x = Math.round(Math.max(0f, Math.min(1f, xf)) * maxX);
-        params.y = Math.round(Math.max(0f, Math.min(1f, yf)) * maxY);
+        params.x = Math.round(Math.max(0f, Math.min(1f, xf)) * maxX) - originX;
+        params.y = Math.round(Math.max(0f, Math.min(1f, yf)) * maxY) - originY;
+    }
+
+    /**
+     * Compares where the bubble really is on screen with where it was asked to be, and
+     * compensates the difference. The overlay window's origin differs between single-app and
+     * multi-window views on foldables, which used to push the bubble off (or under the keyboard).
+     */
+    private void syncOrigin() {
+        if (bubble == null || bubble.getVisibility() != View.VISIBLE
+                || !bubble.isAttachedToWindow() || !bubble.isLaidOut()) return;
+        int[] loc = new int[2];
+        bubble.getLocationOnScreen(loc);
+        int ox = loc[0] - params.x;
+        int oy = loc[1] - params.y;
+        if (Math.abs(ox - originX) <= 1 && Math.abs(oy - originY) <= 1) return;
+        originX = ox;
+        originY = oy;
+        placeFromPrefs();
+        try { windowManager.updateViewLayout(bubble, params); } catch (Exception ignored) { }
+    }
+
+    private void syncOriginSoon() {
+        mainHandler.removeCallbacks(syncOriginRunnable);
+        mainHandler.postDelayed(syncOriginRunnable, 150);
     }
 
     private void savePosition() {
         int[] s = screenSize();
         int maxX = Math.max(0, s[0] - params.width);
         int maxY = Math.max(0, s[1] - params.height);
-        float xf = maxX > 0 ? (float) params.x / maxX : 1f;
-        float yf = maxY > 0 ? (float) params.y / maxY : 0.5f;
+        float xf = maxX > 0 ? (float) (params.x + originX) / maxX : 1f;
+        float yf = maxY > 0 ? (float) (params.y + originY) / maxY : 0.5f;
         FloatingMicPrefs.setPosition(this, screenKey(), xf, yf);
     }
 
@@ -232,6 +262,7 @@ public class FloatingMicService extends Service {
         if (bubble == null) return;
         placeFromPrefs();
         windowManager.updateViewLayout(bubble, params);
+        syncOriginSoon();
     }
 
     /** Applies size, opacity and side from the settings to the live bubble. */
@@ -247,6 +278,7 @@ public class FloatingMicService extends Service {
         bubble.setAlpha(isProcessing ? opacity * 0.6f : opacity);
         placeFromPrefs();
         windowManager.updateViewLayout(bubble, params);
+        syncOriginSoon();
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -275,6 +307,10 @@ public class FloatingMicService extends Service {
                         | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.START;
+        if (Build.VERSION.SDK_INT >= 28) {
+            params.layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+        }
         placeFromPrefs();
 
         final int touchSlop = (int) (8 * d);
@@ -302,9 +338,11 @@ public class FloatingMicService extends Service {
                             boolean fixedSide = FloatingMicPrefs.getSide(FloatingMicService.this)
                                     != FloatingMicPrefs.SIDE_FREE;
                             if (!fixedSide) {
-                                params.x = Math.max(0, Math.min(s[0] - params.width, startX + dx));
+                                params.x = Math.max(-originX,
+                                        Math.min(s[0] - params.width - originX, startX + dx));
                             }
-                            params.y = Math.max(0, Math.min(s[1] - params.height, startY + dy));
+                            params.y = Math.max(-originY,
+                                    Math.min(s[1] - params.height - originY, startY + dy));
                             windowManager.updateViewLayout(bubble, params);
                         }
                         return true;
@@ -641,6 +679,7 @@ public class FloatingMicService extends Service {
         DictationAccessibilityService.setKeyboardListener(null);
         displayManager.unregisterDisplayListener(displayListener);
         mainHandler.removeCallbacks(repositionRunnable);
+        mainHandler.removeCallbacks(syncOriginRunnable);
         if (isRecording) {
             try { cancelRecording(); } catch (Throwable t) { /* ignore */ }
         }
