@@ -132,6 +132,23 @@ public class FloatingMicService extends Service {
         density = getResources().getDisplayMetrics().density;
         createNotificationChannel();
         DictationAccessibilityService.setKeyboardListener(visible -> mainHandler.post(this::updateVisibility));
+        DictationAccessibilityService.setSendListener(() -> mainHandler.post(this::onHostSendClicked));
+    }
+
+    /**
+     * The message was sent from the app being dictated into: drop the running dictation
+     * (nothing more should be typed into the now empty field) and go back to the idle
+     * green/blue zone, ready for the next message.
+     */
+    private void onHostSendClicked() {
+        if (!isRecording || !zoneMode) return;
+        isRecording = false;
+        liveTyping = false;
+        try { cancelRecording(); } catch (Throwable t) { Log.w(TAG, "cancelRecording failed", t); }
+        DictationAccessibilityService.resetLive();
+        audioPauser.abandon(this);
+        if (bubble != null) setBubbleState(false);
+        updateStopZone();
     }
 
     /** Only shown while the keyboard is open (or busy); always shown if the accessibility service is off. */
@@ -677,6 +694,7 @@ public class FloatingMicService extends Service {
     @Override
     public void onDestroy() {
         DictationAccessibilityService.setKeyboardListener(null);
+        DictationAccessibilityService.setSendListener(null);
         displayManager.unregisterDisplayListener(displayListener);
         mainHandler.removeCallbacks(repositionRunnable);
         mainHandler.removeCallbacks(syncOriginRunnable);

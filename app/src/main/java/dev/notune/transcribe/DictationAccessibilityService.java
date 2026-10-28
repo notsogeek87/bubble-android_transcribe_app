@@ -24,7 +24,13 @@ public class DictationAccessibilityService extends AccessibilityService {
         void onKeyboardVisibilityChanged(boolean visible);
     }
 
+    /** Told when the user taps a "send" button in the app being dictated into. */
+    public interface SendListener {
+        void onSendClicked();
+    }
+
     private static final String TAG = "DictationA11y";
+    private static volatile SendListener sendListener;
     private static volatile DictationAccessibilityService instance;
     private static volatile KeyboardListener keyboardListener;
     private static volatile boolean keyboardVisible;
@@ -47,6 +53,25 @@ public class DictationAccessibilityService extends AccessibilityService {
 
     public static void setKeyboardListener(KeyboardListener l) {
         keyboardListener = l;
+    }
+
+    public static void setSendListener(SendListener l) {
+        sendListener = l;
+    }
+
+    /** Whether a tapped view looks like a "send" button, from its label or id only. */
+    private static boolean looksLikeSend(AccessibilityNodeInfo n) {
+        if (n == null) return false;
+        String[] hints = {
+                n.getContentDescription() == null ? null : n.getContentDescription().toString(),
+                n.getText() == null ? null : n.getText().toString(),
+                n.getViewIdResourceName()};
+        for (String h : hints) {
+            if (h == null) continue;
+            String s = h.toLowerCase(java.util.Locale.ROOT);
+            if (s.contains("send") || s.contains("envoy")) return true;
+        }
+        return false;
     }
 
     /**
@@ -356,6 +381,9 @@ public class DictationAccessibilityService extends AccessibilityService {
         if (t == AccessibilityEvent.TYPE_WINDOWS_CHANGED
                 || t == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             updateKeyboardVisibility();
+        } else if (t == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+            SendListener l = sendListener;
+            if (l != null && looksLikeSend(event.getSource())) l.onSendClicked();
         } else if (t == AccessibilityEvent.TYPE_VIEW_FOCUSED) {
             recheckLeft = 10;
             handler.removeCallbacks(keyboardRecheck);
