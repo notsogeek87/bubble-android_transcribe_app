@@ -155,6 +155,7 @@ public class DictationAccessibilityService extends AccessibilityService {
     /** Replaces old[from..to) with {@code text} and puts the caret after it. */
     private static boolean replace(AccessibilityNodeInfo field, String old, int from, int to, String text) {
         String merged = old.substring(0, from) + text + old.substring(to);
+        lastOwnEditMs = android.os.SystemClock.uptimeMillis();
 
         Bundle args = new Bundle();
         args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, merged);
@@ -174,6 +175,7 @@ public class DictationAccessibilityService extends AccessibilityService {
     // the field no longer shows exactly that (the user typed or moved the
     // cursor), the old text is treated as final and a new anchor is taken at
     // the cursor, so we never overwrite anything the user wrote.
+    private static volatile long lastOwnEditMs;
     private static int liveStart = -1;
     private static String liveText = "";
     // Updates carry the whole sentence in progress. If the field loses what we
@@ -384,6 +386,16 @@ public class DictationAccessibilityService extends AccessibilityService {
         } else if (t == AccessibilityEvent.TYPE_VIEW_CLICKED) {
             SendListener l = sendListener;
             if (l != null && looksLikeSend(event.getSource())) l.onSendClicked();
+        } else if (t == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
+            // Most send buttons have no label, but sending always empties the field we
+            // were typing into. Our own edits are ignored (they come right after we write).
+            SendListener l = sendListener;
+            AccessibilityNodeInfo src = event.getSource();
+            if (l != null && src != null && liveStart >= 0
+                    && android.os.SystemClock.uptimeMillis() - lastOwnEditMs > 500
+                    && currentText(src, exposesPlaceholderAsText(src)).isEmpty()) {
+                l.onSendClicked();
+            }
         } else if (t == AccessibilityEvent.TYPE_VIEW_FOCUSED) {
             recheckLeft = 10;
             handler.removeCallbacks(keyboardRecheck);
