@@ -370,12 +370,55 @@ public class DictationAccessibilityService extends AccessibilityService {
         instance = null;
         handler.removeCallbacks(keyboardPoll);
         handler.removeCallbacks(keyboardRecheck);
+        handler.removeCallbacks(emptiedRecheck);
         keyboardVisible = false;
         keyboardBounds = null;
         KeyboardListener l = keyboardListener;
         if (l != null) l.onKeyboardVisibilityChanged(false);
         return super.onUnbind(intent);
     }
+
+    private static boolean isOwnEditRecent() {
+        return android.os.SystemClock.uptimeMillis() - lastOwnEditMs <= 500;
+    }
+
+    private static void notifySent() {
+        SendListener l = sendListener;
+        if (l != null) l.onSendClicked();
+    }
+
+    /** Whether this text event says the field was just emptied, from its node or its own text. */
+    private static boolean eventShowsEmptiedField(AccessibilityEvent event) {
+        AccessibilityNodeInfo src = event.getSource();
+        if (src != null) {
+            src.refresh();
+            if (isTextField(src) && currentText(src, exposesPlaceholderAsText(src)).isEmpty()) {
+                return true;
+            }
+        }
+        CharSequence before = event.getBeforeText();
+        if (before == null || before.length() == 0 || event.getText() == null) return false;
+        StringBuilder now = new StringBuilder();
+        for (CharSequence c : event.getText()) if (c != null) now.append(c);
+        String text = now.toString();
+        CharSequence pkg = event.getPackageName();
+        boolean placeholderApp = false;
+        if (pkg != null) {
+            for (String p : PLACEHOLDER_AS_TEXT_PACKAGES) if (p.contentEquals(pkg)) placeholderApp = true;
+        }
+        return text.trim().isEmpty() || (placeholderApp && isKnownPlaceholder(text));
+    }
+
+    // Second look at the focused field a moment after a text change we could not judge.
+    private final Runnable emptiedRecheck = new Runnable() {
+        @Override public void run() {
+            if (sendListener == null || liveStart < 0 || isOwnEditRecent()) return;
+            AccessibilityNodeInfo field = findFocusedEditable();
+            if (field != null && currentText(field, exposesPlaceholderAsText(field)).isEmpty()) {
+                notifySent();
+            }
+        }
+    };
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
@@ -386,15 +429,18 @@ public class DictationAccessibilityService extends AccessibilityService {
         } else if (t == AccessibilityEvent.TYPE_VIEW_CLICKED) {
             SendListener l = sendListener;
             if (l != null && looksLikeSend(event.getSource())) l.onSendClicked();
-        } else if (t == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
+        } else if (t == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED
+                || t == AccessibilityEvent.TYPE_VIEW_TEXT_SELECTION_CHANGED) {
             // Most send buttons have no label, but sending always empties the field we
             // were typing into. Our own edits are ignored (they come right after we write).
-            SendListener l = sendListener;
-            AccessibilityNodeInfo src = event.getSource();
-            if (l != null && src != null && liveStart >= 0
-                    && android.os.SystemClock.uptimeMillis() - lastOwnEditMs > 500
-                    && currentText(src, exposesPlaceholderAsText(src)).isEmpty()) {
-                l.onSendClicked();
+            // Some apps (WhatsApp) report the cleared field late or with a stale node, so the
+            // event is judged on its own text and the field is looked at again shortly after.
+            if (sendListener == null || liveStart < 0 || isOwnEditRecent()) return;
+            if (eventShowsEmptiedField(event)) {
+                notifySent();
+            } else {
+                handler.removeCallbacks(emptiedRecheck);
+                handler.postDelayed(emptiedRecheck, 250);
             }
         } else if (t == AccessibilityEvent.TYPE_VIEW_FOCUSED) {
             recheckLeft = 10;
