@@ -261,6 +261,23 @@ public class FloatingMicService extends Service {
         try { windowManager.updateViewLayout(bubble, params); } catch (Exception ignored) { }
     }
 
+    /**
+     * Makes (x, y) of an overlay window mean real screen coordinates, whatever the app below.
+     * Since Android 11 a window is laid out inside the system bars by default, so its origin
+     * moved with the status bar / taskbar, which come and go between full-screen and split
+     * screen: the bubble jumped each time an app was opened in split screen.
+     */
+    private static void pinToScreenOrigin(WindowManager.LayoutParams lp) {
+        if (Build.VERSION.SDK_INT >= 28) {
+            lp.layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+        }
+        if (Build.VERSION.SDK_INT >= 30) {
+            lp.setFitInsetsTypes(0);
+            lp.setFitInsetsSides(0);
+        }
+    }
+
     private void syncOriginSoon() {
         mainHandler.removeCallbacks(syncOriginRunnable);
         mainHandler.postDelayed(syncOriginRunnable, 150);
@@ -324,10 +341,7 @@ public class FloatingMicService extends Service {
                         | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.START;
-        if (Build.VERSION.SDK_INT >= 28) {
-            params.layoutInDisplayCutoutMode =
-                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
-        }
+        pinToScreenOrigin(params);
         placeFromPrefs();
 
         final int touchSlop = (int) (8 * d);
@@ -375,6 +389,11 @@ public class FloatingMicService extends Service {
             }
         });
 
+        // System bars shown/hidden (split screen, taskbar...): check the bubble didn't move.
+        bubble.setOnApplyWindowInsetsListener((v, insets) -> {
+            syncOriginSoon();
+            return insets;
+        });
         windowManager.addView(bubble, params);
         bubble.setAlpha(opacity);
         displayManager.registerDisplayListener(displayListener, mainHandler);
@@ -497,12 +516,9 @@ public class FloatingMicService extends Service {
                             | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                     PixelFormat.TRANSLUCENT);
             stopZoneParams.gravity = Gravity.TOP | Gravity.START;
-            // Without this, devices with a cut-out/status bar may place the window below it,
-            // shifting the zone (and its centred mic) down from the keyboard.
-            if (Build.VERSION.SDK_INT >= 28) {
-                stopZoneParams.layoutInDisplayCutoutMode =
-                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
-            }
+            // Without this, the window may be placed below the status bar/cut-out (or the
+            // taskbar in split screen), shifting the zone (and its centred mic) off the keyboard.
+            pinToScreenOrigin(stopZoneParams);
             stopZoneParams.x = kb.left;
             stopZoneParams.y = kb.top;
             try {
