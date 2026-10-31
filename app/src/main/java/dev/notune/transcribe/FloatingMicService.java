@@ -461,6 +461,15 @@ public class FloatingMicService extends Service {
             removeStopZone();
             return;
         }
+        // Leave the keyboard's top edge uncovered. A touchable window that hides the whole
+        // keyboard makes Android drop the keyboard from the accessibility windows: it was then
+        // seen as closed, the zone removed, the keyboard seen again, the zone re-added... and
+        // the zone flickered in a loop that no tap could stop.
+        kb.top += Math.max(1, Math.round(density));
+        if (kb.height() <= 0) {
+            removeStopZone();
+            return;
+        }
 
         if (stopZone == null) {
             stopZone = new FrameLayout(this);
