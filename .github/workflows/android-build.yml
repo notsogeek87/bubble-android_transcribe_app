@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 # Un push et une pull request sur la même branche lancent chacun un build ; les deux
 # supprimaient puis recréaient la même release "debug-<branche>" et s'entre-échouaient.
@@ -20,16 +20,18 @@ concurrency:
 
 jobs:
   build:
+    permissions:
+      contents: write # publication des releases / APK
     runs-on: ubuntu-latest
     env:
       # Devient versionCode (+ versionCodeOffset) et dernier segment du versionName (voir app/build.gradle.kts).
       BUILD_NUMBER: ${{ github.run_number }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: "17"
@@ -45,8 +47,9 @@ jobs:
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.0.13004108" >> $GITHUB_ENV
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
         with:
+          toolchain: stable
           targets: aarch64-linux-android
 
       # transcribe-cpp-sys compile son cœur C++ (whisper.cpp/ggml) avec CMake.
@@ -57,7 +60,7 @@ jobs:
         run: cargo install cargo-ndk
 
       - name: Cache Rust dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.cargo/registry
@@ -68,7 +71,7 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Cache Gradle
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.gradle/caches
@@ -133,7 +136,7 @@ jobs:
           echo "$BADGING" | grep -q "versionName='${{ steps.version.outputs.name }}'" || { echo "::error::versionName attendu : ${{ steps.version.outputs.name }}"; exit 1; }
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: transcribe-${{ github.run_number }}
           path: ${{ steps.apk.outputs.path }}
