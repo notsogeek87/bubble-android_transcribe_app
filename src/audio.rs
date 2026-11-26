@@ -21,6 +21,32 @@ pub fn find_quietest_split(samples: &[f32], from: usize, to: usize) -> usize {
     best_pos
 }
 
+/// Best place to cut `samples[from..to]` between two phrases: the centre of
+/// the quietest 400 ms stretch. A longer window than
+/// [`find_quietest_split`]'s favours real pauses (between words or
+/// sentences) over the brief dip of a stop consonant inside a word. Ties go
+/// to the latest position, so chunks stay as long as allowed.
+pub fn find_pause_split(samples: &[f32], from: usize, to: usize) -> usize {
+    const WIN: usize = 6_400; // 400 ms
+    const STEP: usize = 800; // 50 ms
+    let to = to.min(samples.len());
+    if from + WIN > to {
+        return to;
+    }
+    let mut best_pos = to;
+    let mut best_energy = f32::MAX;
+    let mut i = from;
+    while i + WIN <= to {
+        let energy: f32 = samples[i..i + WIN].iter().map(|&x| x * x).sum();
+        if energy <= best_energy {
+            best_energy = energy;
+            best_pos = i + WIN / 2;
+        }
+        i += STEP;
+    }
+    best_pos
+}
+
 /// Analysis frame for [`trim_silence`] (20 ms at 16 kHz).
 const TRIM_FRAME: usize = 320;
 /// Context kept around the detected speech so soft onsets/endings survive.
@@ -167,6 +193,16 @@ mod tests {
         assert_eq!(trim_silence(silence.clone()).len(), silence.len());
         let short = clip(0.1, 0.3, 0.1, 0.001);
         assert_eq!(trim_silence(short.clone()).len(), short.len());
+    }
+
+    #[test]
+    fn pause_split_lands_in_the_pause() {
+        // 15 s speech, 0.6 s pause, 10 s speech: the cut must be in the pause.
+        let mut v = tone(15.0, 0.3);
+        v.extend(tone(0.6, 0.001));
+        v.extend(tone(10.0, 0.3));
+        let cut = find_pause_split(&v, 12 * 16_000, 25 * 16_000);
+        assert!(cut > 15 * 16_000 && cut < (15.6 * 16_000.0) as usize, "cut at {cut}");
     }
 
     #[test]

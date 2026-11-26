@@ -30,14 +30,20 @@ const MODEL_TRANSLATE_FILE: &str = "model_translate";
 /// Absent/invalid/0 = default (all cores).
 const MODEL_THREADS_FILE: &str = "model_threads";
 
-/// Longest audio passed to the model in one run (60 s). Offline conformer
-/// models use full self-attention, whose cost grows quadratically with input
-/// length — an unbounded shared audio file would exhaust memory on a phone.
-/// Longer input is split at quiet points and the texts joined.
-const MAX_RUN_SAMPLES: usize = 60 * 16_000;
-/// When splitting, search this far back from the hard boundary for the
-/// quietest point so words aren't cut mid-syllable.
-const SPLIT_SEARCH_SAMPLES: usize = 10 * 16_000;
+/// Longest audio passed to the model in one run (25 s). Two reasons:
+/// - accuracy: the models are trained on utterances of a few seconds to
+///   ~30 s. On longer input in one pass, Parakeet's full self-attention and
+///   automatic language detection drift after a few sentences (text turning
+///   into another language or nonsense), and Whisper — whose window is 30 s —
+///   has to seek between windows, where a bad window can start a repetition
+///   loop since its retry ladder is off (see `Engine::load`);
+/// - memory: attention cost grows quadratically with input length.
+/// Longer input is split at natural pauses and the texts joined.
+const MAX_RUN_SAMPLES: usize = 25 * 16_000;
+/// When splitting, the cut is placed at the most silent pause found between
+/// this length and [`MAX_RUN_SAMPLES`], so words and, ideally, sentences are
+/// not cut.
+const MIN_RUN_SAMPLES: usize = 12 * 16_000;
 
 /// A loaded transcribe.cpp session plus the options applied to every run.
 pub struct Engine {
@@ -139,11 +145,7 @@ impl Engine {
             let take = if rest.len() <= MAX_RUN_SAMPLES {
                 rest.len()
             } else {
-                crate::audio::find_quietest_split(
-                    rest,
-                    MAX_RUN_SAMPLES - SPLIT_SEARCH_SAMPLES,
-                    MAX_RUN_SAMPLES,
-                )
+                crate::audio::find_pause_split(rest, MIN_RUN_SAMPLES, MAX_RUN_SAMPLES)
             };
             let piece = self.run(&rest[..take])?;
             let piece = piece.trim();
@@ -172,7 +174,7 @@ impl Engine {
                 ..Default::default()
             };
             match self.session.run(samples, &opts) {
-                Ok(t) => return Ok(t.text),
+                Ok(t) => return Ok(crate::text::collapse_repetitions(&t.text)),
                 Err(transcribe_cpp::Error::Unsupported(msg)) if self.language.is_some() => {
                     let lang = self.language.take().unwrap();
                     self.language = lang.split_once('-').map(|(primary, _)| primary.to_string());
